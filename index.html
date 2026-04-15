@@ -4,7 +4,9 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Northfields Allotments</title>
-<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=DM+Mono:wght@500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css"/>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
 <style>
 :root {
   --bg: #F5F3EE;
@@ -15,290 +17,157 @@
   --text-muted: #7A7670;
   --text-faint: #B0ADA6;
   --accent: #2E5E2E;
-
-  /* Status colours */
   --c-active: #4A8C3F;
   --c-strike1: #7DC055;
   --c-strike2: #D4537E;
   --c-intake: #7F77DD;
   --c-vacant: #AEAAA2;
   --c-attention: #E07B3A;
-  --c-unalloc: #D0CEC8;
-
+  --c-unalloc: #C8C4BC;
   --radius: 8px;
   --radius-sm: 5px;
 }
-
 * { box-sizing: border-box; margin: 0; padding: 0; }
+html, body { height: 100%; overflow: hidden; font-family: 'DM Sans', sans-serif; font-size: 13px; color: var(--text); background: var(--bg); }
 
-body {
-  font-family: 'DM Sans', sans-serif;
-  background: var(--bg);
-  color: var(--text);
-  font-size: 13px;
-  height: 100vh;
-  overflow: hidden;
-  display: flex;
-  flex-direction: column;
-}
-
-/* ── NAV ── */
-.nav {
-  display: flex;
-  align-items: center;
-  gap: 4px;
-  padding: 0 16px;
-  background: var(--surface);
-  border-bottom: 1px solid var(--border);
-  height: 46px;
-  flex-shrink: 0;
-  z-index: 10;
-}
-.nav-brand {
-  font-weight: 700;
-  font-size: 14px;
-  letter-spacing: -0.3px;
-  margin-right: 12px;
-  white-space: nowrap;
-  color: var(--text);
-}
+/* NAV */
+.nav { display: flex; align-items: center; gap: 3px; padding: 0 14px; background: var(--surface); border-bottom: 1px solid var(--border); height: 44px; flex-shrink: 0; }
+.nav-brand { font-weight: 700; font-size: 14px; letter-spacing: -.3px; margin-right: 10px; white-space: nowrap; }
 .nav-brand span { color: var(--accent); }
-.tab {
-  padding: 5px 14px;
-  border: 1px solid transparent;
-  border-radius: var(--radius-sm);
-  background: transparent;
-  color: var(--text-muted);
-  cursor: pointer;
-  font-size: 12.5px;
-  font-family: inherit;
-  font-weight: 500;
-  transition: all .12s;
-  white-space: nowrap;
-}
+.tab { padding: 5px 13px; border: 1px solid transparent; border-radius: var(--radius-sm); background: transparent; color: var(--text-muted); cursor: pointer; font-size: 12.5px; font-family: inherit; font-weight: 500; white-space: nowrap; }
 .tab:hover { background: var(--bg); color: var(--text); }
-.tab.active {
-  background: var(--bg);
-  border-color: var(--border);
-  color: var(--text);
-  font-weight: 600;
-}
+.tab.active { background: var(--bg); border-color: var(--border); color: var(--text); font-weight: 600; }
 
-/* ── PAGES ── */
-.page { display: none; flex: 1; overflow: hidden; }
-.page.active { display: flex; flex-direction: column; }
-
-/* ── DASHBOARD ── */
-.dash-content { padding: 20px; overflow-y: auto; flex: 1; }
-.stat-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 10px; margin-bottom: 20px; }
-.stat-card {
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
-  padding: 14px 16px;
-}
-.stat-card .label { font-size: 11px; color: var(--text-muted); margin-bottom: 5px; font-weight: 500; text-transform: uppercase; letter-spacing: .04em; }
-.stat-card .value { font-size: 28px; font-weight: 700; line-height: 1; }
-.v-green { color: var(--c-active); }
-.v-red { color: #A32D2D; }
-.v-amber { color: #854F0B; }
-.v-blue { color: #185FA5; }
-.v-purple { color: #534AB7; }
-
-.two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
-.section-label { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: .08em; color: var(--text-muted); margin-bottom: 8px; }
-.attn-card {
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: var(--radius-sm);
-  padding: 9px 12px;
-  margin-bottom: 6px;
-  cursor: pointer;
-  transition: border-color .12s, background .12s;
-}
-.attn-card:hover { border-color: var(--border-strong); background: var(--bg); }
-.attn-plot { font-weight: 700; font-size: 13px; }
-.attn-meta { font-size: 11px; color: var(--text-muted); margin-top: 1px; }
-.hist-item { padding: 7px 0; border-bottom: 1px solid var(--border); }
-.hist-item:last-child { border-bottom: none; }
-.hist-date { font-size: 10px; color: var(--text-faint); margin-bottom: 1px; font-family: 'DM Mono', monospace; }
+/* PAGES */
+.page { display: none; height: calc(100vh - 44px); overflow: hidden; flex-direction: column; }
+.page.active { display: flex; }
 
 /* ── SITE MAP PAGE ── */
-.map-page {
-  flex: 1;
-  display: grid;
-  grid-template-columns: 320px 1fr;
-  overflow: hidden;
-  gap: 0;
-}
-@media (max-width: 700px) {
-  .map-page { grid-template-columns: 1fr; grid-template-rows: 50vh 1fr; }
-}
+.map-layout { display: grid; grid-template-columns: 1fr 400px; height: 100%; overflow: hidden; }
+@media (max-width: 800px) { .map-layout { grid-template-columns: 1fr; grid-template-rows: 55% 45%; } }
 
-/* ── LEGEND BAR ── */
-.legend-bar {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 10px;
-  padding: 7px 14px;
-  background: var(--surface);
-  border-bottom: 1px solid var(--border);
-  flex-shrink: 0;
-  font-size: 11px;
-  align-items: center;
-  color: var(--text-muted);
+.map-wrap { position: relative; }
+#leaflet-map { width: 100%; height: 100%; }
+
+/* Upload KML banner */
+.kml-banner {
+  position: absolute; top: 10px; left: 50%; transform: translateX(-50%);
+  background: rgba(255,255,255,.95); border: 1px solid var(--border-strong);
+  border-radius: var(--radius); padding: 7px 14px; font-size: 12px;
+  color: var(--text-muted); z-index: 1000; display: flex; align-items: center; gap: 8px;
+  box-shadow: 0 2px 8px rgba(0,0,0,.1); white-space: nowrap;
 }
-.legend-bar-wrap { flex-shrink: 0; background: var(--surface); border-bottom: 1px solid var(--border); }
+.kml-banner label { cursor: pointer; color: var(--accent); font-weight: 600; text-decoration: underline; }
+#kml-file-input { display: none; }
+
+/* Real/approx indicator */
+.map-badge {
+  position: absolute; bottom: 28px; left: 10px; z-index: 1000;
+  background: rgba(255,255,255,.9); border: 1px solid var(--border);
+  border-radius: var(--radius-sm); padding: 5px 10px; font-size: 11px; color: var(--text-muted);
+}
+.map-badge span { display: inline-block; width: 8px; height: 8px; border-radius: 1px; margin-right: 4px; vertical-align: middle; }
+
+/* LEGEND */
+.legend-strip {
+  display: flex; flex-wrap: wrap; gap: 8px; padding: 6px 12px;
+  background: var(--surface); border-bottom: 1px solid var(--border);
+  font-size: 11px; color: var(--text-muted); align-items: center; flex-shrink: 0;
+}
 .leg { display: flex; align-items: center; gap: 4px; }
-.leg-swatch { width: 11px; height: 11px; border-radius: 2px; flex-shrink: 0; }
+.leg-dot { width: 10px; height: 10px; border-radius: 2px; flex-shrink: 0; }
 
-/* ── MAP PANEL ── */
-.map-col {
-  background: var(--surface);
-  border-right: 1px solid var(--border);
-  display: flex;
-  flex-direction: column;
-  overflow: hidden;
+/* DETAIL PANEL */
+.detail-panel {
+  background: var(--surface); border-left: 1px solid var(--border);
+  overflow-y: auto; padding: 22px 24px; display: flex; flex-direction: column;
 }
-.map-scroll {
-  flex: 1;
-  overflow: auto;
-  padding: 12px;
-  cursor: grab;
-}
-.map-scroll:active { cursor: grabbing; }
-.map-hint { font-size: 11px; color: var(--text-faint); padding: 0 2px 6px; }
-
-/* ── DETAIL PANEL ── */
-.detail-col {
-  overflow-y: auto;
-  padding: 24px 28px;
-  background: var(--bg);
-}
-.no-sel {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  height: 100%;
-  color: var(--text-faint);
-  text-align: center;
-  gap: 8px;
-}
-.no-sel-icon { font-size: 36px; opacity: .4; }
-.no-sel-text { font-size: 13px; line-height: 1.6; }
-
-.plot-title { font-size: 26px; font-weight: 800; letter-spacing: -0.5px; line-height: 1; }
-.plot-road { font-size: 12px; color: var(--text-muted); margin-top: 3px; margin-bottom: 14px; }
-.detail-divider { border: none; border-top: 1px solid var(--border); margin: 14px 0; }
-.detail-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px 20px; }
-.df label { display: block; font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: .05em; color: var(--text-muted); margin-bottom: 3px; }
-.df .dv { font-size: 13px; color: var(--text); font-weight: 500; }
+.no-sel { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; color: var(--text-faint); text-align: center; gap: 8px; }
+.no-sel-icon { font-size: 32px; opacity: .35; }
+.plot-title { font-size: 24px; font-weight: 800; letter-spacing: -.5px; }
+.plot-road { font-size: 12px; color: var(--text-muted); margin-top: 2px; margin-bottom: 12px; }
+.divider { border: none; border-top: 1px solid var(--border); margin: 12px 0; }
+.detail-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 9px 18px; }
+.df label { display: block; font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: .05em; color: var(--text-muted); margin-bottom: 2px; }
+.df .dv { font-size: 13px; font-weight: 500; }
 .df .dv.empty { color: var(--text-faint); font-style: italic; font-weight: 400; }
-
 .progress-wrap { margin-top: 10px; }
-.progress-wrap label { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: .05em; color: var(--text-muted); }
-.progress-track { background: var(--border); border-radius: 4px; height: 9px; margin-top: 5px; overflow: hidden; position: relative; }
-.progress-fill { height: 100%; background: var(--c-active); border-radius: 4px; transition: width .4s; }
-.progress-ticks { display: flex; justify-content: space-between; font-size: 9px; color: var(--text-faint); margin-top: 3px; font-family: 'DM Mono', monospace; }
-.cult-note { font-size: 11px; margin-top: 5px; font-weight: 600; }
-.cult-ok { color: var(--c-active); }
-.cult-warn { color: #854F0B; }
-
-.hist-wrap { margin-top: 4px; }
-.hist-entry { padding: 7px 0; border-bottom: 1px solid var(--border); }
+.progress-wrap .plabel { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: .05em; color: var(--text-muted); }
+.progress-track { background: var(--border); border-radius: 4px; height: 8px; margin-top: 4px; overflow: hidden; }
+.progress-fill { height: 100%; background: var(--c-active); border-radius: 4px; }
+.progress-ticks { display: flex; justify-content: space-between; font-size: 9px; color: var(--text-faint); margin-top: 2px; font-family: 'DM Mono', monospace; }
+.cult-note { font-size: 11px; margin-top: 4px; font-weight: 600; }
+.cult-ok { color: var(--c-active); } .cult-warn { color: #854F0B; }
+.sec-label { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: .07em; color: var(--text-muted); margin: 12px 0 6px; }
+.hist-entry { padding: 6px 0; border-bottom: 1px solid var(--border); }
 .hist-entry:last-child { border-bottom: none; }
-.hist-entry .hdate { font-size: 10px; color: var(--text-faint); font-family: 'DM Mono', monospace; margin-bottom: 2px; }
-.hist-entry .htext { font-size: 12px; }
+.hdate { font-size: 10px; color: var(--text-faint); font-family: 'DM Mono', monospace; margin-bottom: 1px; }
+.htext { font-size: 12px; }
 
-.action-row { display: flex; gap: 8px; margin-top: 12px; }
+/* BADGES */
+.badge { display: inline-flex; align-items: center; padding: 2px 7px; border-radius: 4px; font-size: 11px; font-weight: 600; }
+.b-active   { background:#EAF3DE; color:#27500A; }
+.b-1strike  { background:#E8F5D6; color:#3B6D11; }
+.b-2strikes { background:#FBEAF0; color:#72243E; }
+.b-intake   { background:#EEEDFE; color:#3C3489; }
+.b-vacant   { background:#F1EFE8; color:#5F5E5A; }
+.b-attention{ background:#FAEEDA; color:#633806; }
+.b-unalloc  { background:#F1EFE8; color:#888780; }
 
-/* ── BADGES ── */
-.badge {
-  display: inline-flex; align-items: center;
-  padding: 2px 8px;
-  border-radius: 4px;
-  font-size: 11px;
-  font-weight: 600;
-  white-space: nowrap;
-}
-.badge-active { background: #EAF3DE; color: #27500A; }
-.badge-1strike { background: #E8F5D6; color: #3B6D11; }
-.badge-2strikes { background: #FBEAF0; color: #72243E; }
-.badge-intake { background: #EEEDFE; color: #3C3489; }
-.badge-vacant { background: #F1EFE8; color: #5F5E5A; }
-.badge-attention { background: #FAEEDA; color: #633806; }
-.badge-unallocated { background: #F1EFE8; color: #888780; }
-
-/* ── BUTTONS ── */
-.btn {
-  padding: 7px 14px;
-  border: 1px solid var(--border-strong);
-  border-radius: var(--radius-sm);
-  background: var(--surface);
-  color: var(--text);
-  cursor: pointer;
-  font-size: 12px;
-  font-family: inherit;
-  font-weight: 600;
-  transition: all .12s;
-}
+/* BUTTONS */
+.btn { padding: 6px 12px; border: 1px solid var(--border-strong); border-radius: var(--radius-sm); background: var(--surface); color: var(--text); cursor: pointer; font-size: 12px; font-family: inherit; font-weight: 600; }
 .btn:hover { background: var(--bg); }
 .btn-ghost { border-color: var(--border); color: var(--text-muted); font-weight: 500; }
-.btn-ghost:hover { border-color: var(--border-strong); color: var(--text); background: var(--bg); }
+.btn-ghost:hover { border-color: var(--border-strong); color: var(--text); }
 
-/* ── MANAGE PAGE ── */
-.manage-content { flex: 1; overflow-y: auto; padding: 20px; }
+/* SCROLLABLE PAGES */
+.scroll-page { flex: 1; overflow-y: auto; padding: 18px 20px; }
+
+/* TABLES */
 .tbl { width: 100%; border-collapse: collapse; font-size: 12px; }
-.tbl th { text-align: left; padding: 8px 10px; font-weight: 700; font-size: 10px; text-transform: uppercase; letter-spacing: .05em; color: var(--text-muted); border-bottom: 1px solid var(--border-strong); white-space: nowrap; }
-.tbl td { padding: 8px 10px; border-bottom: 1px solid var(--border); vertical-align: middle; }
+.tbl th { text-align: left; padding: 7px 9px; font-weight: 700; font-size: 10px; text-transform: uppercase; letter-spacing: .05em; color: var(--text-muted); border-bottom: 1px solid var(--border-strong); white-space: nowrap; }
+.tbl td { padding: 7px 9px; border-bottom: 1px solid var(--border); vertical-align: middle; }
 .tbl tr:hover td { background: var(--bg); }
-.search-bar { width: 100%; padding: 9px 13px; border: 1px solid var(--border-strong); border-radius: var(--radius); background: var(--surface); font-family: inherit; font-size: 13px; color: var(--text); margin-bottom: 14px; outline: none; }
+.search-bar { width: 100%; padding: 8px 12px; border: 1px solid var(--border-strong); border-radius: var(--radius); background: var(--surface); font-family: inherit; font-size: 13px; color: var(--text); margin-bottom: 12px; outline: none; }
 .search-bar:focus { border-color: var(--accent); }
-
-/* ── REPORTS ── */
-.reports-content { flex: 1; overflow-y: auto; padding: 20px; }
-.rep-cult-bar { background: var(--border); border-radius: 3px; height: 7px; margin-top: 4px; overflow: hidden; }
-.rep-cult-fill { height: 100%; background: var(--c-active); border-radius: 3px; }
-
-/* ── MODAL ── */
-.modal-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,.45); z-index: 200; align-items: flex-start; justify-content: center; padding: 32px 16px; overflow-y: auto; }
-.modal-overlay.open { display: flex; }
-.modal { background: var(--surface); border-radius: var(--radius); padding: 22px; width: 100%; max-width: 500px; border: 1px solid var(--border-strong); }
-.modal-title { font-size: 16px; font-weight: 700; margin-bottom: 16px; letter-spacing: -.2px; }
-.fg { margin-bottom: 10px; }
-.fg label { display: block; font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: .05em; color: var(--text-muted); margin-bottom: 4px; }
-.fg input, .fg select, .fg textarea {
-  width: 100%; padding: 8px 10px;
-  border: 1px solid var(--border-strong);
-  border-radius: var(--radius-sm);
-  background: var(--surface);
-  color: var(--text);
-  font-size: 13px;
-  font-family: inherit;
-  outline: none;
-  transition: border-color .12s;
-}
-.fg input:focus, .fg select:focus, .fg textarea:focus { border-color: var(--accent); }
-.fg textarea { resize: vertical; min-height: 58px; }
-.form2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
-@media (max-width: 480px) { .form2 { grid-template-columns: 1fr; } }
-.modal-actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 16px; }
-
-/* ── PROGRESS BAR IN TABLE ── */
-.mini-bar { background: var(--border); border-radius: 3px; height: 6px; width: 54px; overflow: hidden; display: inline-block; vertical-align: middle; margin-right: 5px; }
+.mini-bar { background: var(--border); border-radius: 3px; height: 6px; width: 48px; overflow: hidden; display: inline-block; vertical-align: middle; margin-right: 4px; }
 .mini-fill { height: 100%; background: var(--c-active); border-radius: 3px; }
 
-/* ── SVG MAP STYLES ── */
-.plot-g { cursor: pointer; }
-.plot-g rect { transition: opacity .1s; }
-.plot-g:hover rect { opacity: .75 !important; }
-.plot-g.selected rect { stroke: #1C1B18 !important; stroke-width: 2.5px !important; }
+/* STATS */
+.stat-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(110px,1fr)); gap: 8px; margin-bottom: 16px; }
+.stat-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 12px 14px; }
+.stat-card .slabel { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: .04em; color: var(--text-muted); margin-bottom: 4px; }
+.stat-card .svalue { font-size: 26px; font-weight: 800; line-height: 1; }
+.sv-g{color:var(--c-active)}.sv-r{color:#A32D2D}.sv-a{color:#854F0B}.sv-b{color:#185FA5}.sv-p{color:#534AB7}
+
+.attn-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 9px 11px; margin-bottom: 6px; cursor: pointer; }
+.attn-card:hover { border-color: var(--border-strong); background: var(--bg); }
+.hist-item { padding: 6px 0; border-bottom: 1px solid var(--border); }
+.hist-item:last-child { border-bottom: none; }
+.hist-date { font-size: 10px; color: var(--text-faint); font-family: 'DM Mono', monospace; margin-bottom: 1px; }
+.two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+
+/* MODAL */
+.modal-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,.45); z-index: 2000; align-items: flex-start; justify-content: center; padding: 28px 14px; overflow-y: auto; }
+.modal-overlay.open { display: flex; }
+.modal { background: var(--surface); border-radius: var(--radius); padding: 20px; width: 100%; max-width: 500px; border: 1px solid var(--border-strong); }
+.modal-title { font-size: 15px; font-weight: 700; margin-bottom: 14px; }
+.fg { margin-bottom: 9px; }
+.fg label { display: block; font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: .05em; color: var(--text-muted); margin-bottom: 3px; }
+.fg input,.fg select,.fg textarea { width: 100%; padding: 7px 9px; border: 1px solid var(--border-strong); border-radius: var(--radius-sm); background: var(--surface); color: var(--text); font-size: 13px; font-family: inherit; outline: none; }
+.fg input:focus,.fg select:focus,.fg textarea:focus { border-color: var(--accent); }
+.fg textarea { resize: vertical; min-height: 54px; }
+.form2 { display: grid; grid-template-columns: 1fr 1fr; gap: 9px; }
+@media(max-width:480px){.form2{grid-template-columns:1fr}}
+.modal-actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 14px; }
+
+/* Rep */
+.rep-bar-track { background: var(--border); border-radius: 3px; height: 7px; margin-top: 3px; overflow: hidden; }
+.rep-bar-fill { height: 100%; background: var(--c-active); border-radius: 3px; }
 </style>
 </head>
 <body>
 
-<!-- NAV -->
 <nav class="nav">
   <div class="nav-brand"><span>N</span>orthfields Allotments</div>
   <button class="tab active" onclick="showPage('dash')">Dashboard</button>
@@ -307,61 +176,66 @@ body {
   <button class="tab" onclick="showPage('reports')">Reports</button>
 </nav>
 
-<!-- ══ DASHBOARD ══════════════════════════════════════════════ -->
+<!-- ══ DASHBOARD ══ -->
 <div class="page active" id="page-dash">
-  <div class="dash-content">
+  <div class="scroll-page">
     <div style="font-size:18px;font-weight:800;letter-spacing:-.3px;margin-bottom:14px">Site overview</div>
-    <div class="stat-row" id="dash-stats"></div>
+    <div class="stat-grid" id="dash-stats"></div>
     <div class="two-col">
       <div>
-        <div class="section-label">Plots needing attention</div>
+        <div class="sec-label" style="margin-top:0">Plots needing attention</div>
         <div id="dash-attn"></div>
       </div>
       <div>
-        <div class="section-label">Recent activity</div>
+        <div class="sec-label" style="margin-top:0">Recent activity</div>
         <div id="dash-act"></div>
       </div>
     </div>
   </div>
 </div>
 
-<!-- ══ SITE MAP ════════════════════════════════════════════════ -->
-<div class="page" id="page-map" style="flex-direction:column">
-  <div class="legend-bar-wrap">
-    <div class="legend-bar">
-      <div class="leg"><div class="leg-swatch" style="background:var(--c-active)"></div>Cultivated / active</div>
-      <div class="leg"><div class="leg-swatch" style="background:var(--c-strike1)"></div>1 strike</div>
-      <div class="leg"><div class="leg-swatch" style="background:var(--c-strike2)"></div>2 strikes</div>
-      <div class="leg"><div class="leg-swatch" style="background:var(--c-intake)"></div>2025/26 intake</div>
-      <div class="leg"><div class="leg-swatch" style="background:var(--c-vacant)"></div>Vacant</div>
-      <div class="leg"><div class="leg-swatch" style="background:var(--c-attention)"></div>Needs attention</div>
-      <div class="leg"><div class="leg-swatch" style="background:var(--c-unalloc);border:1px solid #bbb"></div>Not allocated</div>
-    </div>
+<!-- ══ SITE MAP ══ -->
+<div class="page" id="page-map">
+  <div class="legend-strip">
+    <div class="leg"><div class="leg-dot" style="background:var(--c-active)"></div>Active</div>
+    <div class="leg"><div class="leg-dot" style="background:var(--c-strike1)"></div>1 strike</div>
+    <div class="leg"><div class="leg-dot" style="background:var(--c-strike2)"></div>2 strikes</div>
+    <div class="leg"><div class="leg-dot" style="background:var(--c-intake)"></div>2025/26 intake</div>
+    <div class="leg"><div class="leg-dot" style="background:var(--c-vacant)"></div>Vacant</div>
+    <div class="leg"><div class="leg-dot" style="background:var(--c-attention)"></div>Attention</div>
+    <div class="leg"><div class="leg-dot" style="background:var(--c-unalloc);border:1px solid #aaa"></div>Not allocated</div>
   </div>
-  <div class="map-page" style="flex:1;overflow:hidden">
-    <div class="map-col">
-      <div class="map-scroll" id="map-scroll">
-        <div class="map-hint">Tap any plot to view its record</div>
-        <svg id="site-svg" xmlns="http://www.w3.org/2000/svg" style="display:block;max-width:100%"></svg>
+  <div class="map-layout">
+    <div class="map-wrap">
+      <div id="leaflet-map"></div>
+      <div class="kml-banner">
+        <span>📍 4 real polygons loaded</span>
+        <span style="color:var(--border-strong)">·</span>
+        <span>Update map: <label for="kml-file-input">import new KML ↑</label></span>
+        <input type="file" id="kml-file-input" accept=".kml,.kmz" onchange="loadKMLFile(this)">
+      </div>
+      <div class="map-badge">
+        <span style="background:#4A8C3F;opacity:.7"></span>Real polygon &nbsp;
+        <span style="background:#4A8C3F;opacity:.35;border:1px dashed #4A8C3F"></span>Estimated
       </div>
     </div>
-    <div class="detail-col" id="detail-col">
+    <div class="detail-panel" id="detail-panel">
       <div class="no-sel">
         <div class="no-sel-icon">🌿</div>
-        <div class="no-sel-text">Select a plot on the map<br>to view its full record</div>
+        <div style="font-size:13px;line-height:1.6">Tap any plot on the map<br>to view its record</div>
       </div>
     </div>
   </div>
 </div>
 
-<!-- ══ MANAGE ══════════════════════════════════════════════════ -->
-<div class="page" id="page-manage" style="flex-direction:column">
-  <div class="manage-content">
-    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px">
+<!-- ══ MANAGE ══ -->
+<div class="page" id="page-manage">
+  <div class="scroll-page">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
       <div style="font-size:18px;font-weight:800;letter-spacing:-.3px">Manage plots</div>
       <button class="btn" onclick="openAdd()">+ Add plot</button>
     </div>
-    <input class="search-bar" id="srch" type="text" placeholder="Search by plot number, tenant, road…" oninput="renderManage()">
+    <input class="search-bar" id="srch" type="text" placeholder="Search plot number, tenant, road…" oninput="renderManage()">
     <div style="overflow-x:auto">
       <table class="tbl">
         <thead><tr><th>Plot</th><th>Section</th><th>Tenant</th><th>Status</th><th>Cultivation</th><th>Strikes</th><th>Next review</th><th></th></tr></thead>
@@ -371,25 +245,25 @@ body {
   </div>
 </div>
 
-<!-- ══ REPORTS ═════════════════════════════════════════════════ -->
-<div class="page" id="page-reports" style="flex-direction:column">
-  <div class="reports-content">
+<!-- ══ REPORTS ══ -->
+<div class="page" id="page-reports">
+  <div class="scroll-page">
     <div style="font-size:18px;font-weight:800;letter-spacing:-.3px;margin-bottom:14px">Reports</div>
-    <div class="stat-row" id="rep-stats"></div>
-    <div class="two-col" style="margin-top:16px">
+    <div class="stat-grid" id="rep-stats"></div>
+    <div class="two-col" style="margin-top:14px">
       <div>
-        <div class="section-label">Cultivation by section</div>
+        <div class="sec-label" style="margin-top:0">Cultivation by section</div>
         <div id="rep-cult"></div>
       </div>
       <div>
-        <div class="section-label">Strikes</div>
+        <div class="sec-label" style="margin-top:0">Strikes</div>
         <div id="rep-strikes"></div>
-        <div class="section-label" style="margin-top:16px">Status breakdown</div>
+        <div class="sec-label">Status breakdown</div>
         <div id="rep-status"></div>
       </div>
     </div>
-    <div style="margin-top:20px">
-      <div class="section-label">All plots</div>
+    <div style="margin-top:18px">
+      <div class="sec-label" style="margin-top:0">All plots</div>
       <div style="overflow-x:auto">
         <table class="tbl">
           <thead><tr><th>Plot</th><th>Sub</th><th>Section</th><th>Tenant</th><th>Status</th><th>Cult%</th><th>Strikes</th><th>Last insp.</th><th>Next review</th></tr></thead>
@@ -400,21 +274,19 @@ body {
   </div>
 </div>
 
-<!-- ══ MODAL ═══════════════════════════════════════════════════ -->
+<!-- ══ MODAL ══ -->
 <div class="modal-overlay" id="modal">
   <div class="modal">
     <div class="modal-title" id="modal-title">Edit plot</div>
     <div class="form2">
       <div class="fg"><label>Plot number</label><input id="f-id" type="text"></div>
-      <div class="fg"><label>Sub-plot (A / B / M / D)</label><input id="f-sub" type="text" placeholder="e.g. A, B, M"></div>
+      <div class="fg"><label>Sub-plot (A/B/M/D)</label><input id="f-sub" type="text" placeholder="e.g. A, B, M"></div>
     </div>
     <div class="form2">
       <div class="fg"><label>Section</label>
         <select id="f-road">
-          <option>Mattock Lane</option>
-          <option>Northfields Avenue</option>
-          <option>Occupation Road</option>
-          <option>Chapel</option>
+          <option>Mattock Lane</option><option>Northfields Avenue</option>
+          <option>Occupation Road</option><option>Chapel</option>
         </select>
       </div>
       <div class="fg"><label>Status</label>
@@ -435,7 +307,7 @@ body {
     </div>
     <div class="form2">
       <div class="fg"><label>Intake year</label><input id="f-intake" type="text"></div>
-      <div class="fg"><label>Tenancy start</label><input id="f-start" type="date"></div>
+      <div class="fg"><label>Start date</label><input id="f-start" type="date"></div>
     </div>
     <div class="form2">
       <div class="fg"><label>Cultivation %</label><input id="f-cult" type="number" min="0" max="100" step="5"></div>
@@ -446,9 +318,7 @@ body {
       <div class="fg"><label>Next review</label><input id="f-review" type="date"></div>
     </div>
     <div class="fg"><label>Notes</label><textarea id="f-notes"></textarea></div>
-    <div class="fg"><label>Log manager action today</label>
-      <textarea id="f-action" placeholder="Describe any inspection, visit, or follow-up taken today…"></textarea>
-    </div>
+    <div class="fg"><label>Log action today</label><textarea id="f-action" placeholder="Describe any inspection, visit, or follow-up taken today…"></textarea></div>
     <div class="modal-actions">
       <button class="btn btn-ghost" onclick="closeModal()">Cancel</button>
       <button class="btn" onclick="saveModal()">Save record</button>
@@ -458,566 +328,594 @@ body {
 
 <script>
 // ═══════════════════════════════════════════════════════════════
-//  PLOT DATABASE
-//  Transcribed row-by-row from the hand-drawn map.
-//
-//  MAP READING KEY:
-//  Each row on the map = left plot (west/even) + right plot (east/odd)
-//  Sub-plot letters shown alongside plot number: A, B, C, D, M
-//
-//  COLOUR from the hand-drawn map:
-//    GREEN highlight  = 1 strike
-//    PINK/RED         = 2 strikes   (241, 177)
-//    PURPLE           = 2025/26 intake (216A, 154, 152, 150, 153, 151, 149, 167, 165)
-//    No highlight     = active/cultivated
-//
-//  Two main sections separated by internal "ROADWAY":
-//    Section 1 (Mattock Lane): plots 194–242+, top of site
-//    Section 2 (Northfields Ave): plots 146–193, bottom of site
+// POLYGON DATA — 4 real from KML, 94 calculated from site geometry
+// Real polygons match actual drawn boundaries in Google My Maps.
+// Approximate polygons will be replaced as you draw more in My Maps
+// and re-import the KML using the "import new KML" button.
 // ═══════════════════════════════════════════════════════════════
-
-const ML  = 'Mattock Lane';
-const NFA = 'Northfields Avenue';
-
-function mkp(id, road, sub, status, cult, strikes, intake, tenant, contact, start, lastInsp, nextReview, notes, actions) {
-  return { id, road, sub: sub||'', status, cult: cult||0, strikes: strikes||0,
-           intake: intake||'', tenant: tenant||'', contact: contact||'',
-           start: start||'', lastInsp: lastInsp||'', nextReview: nextReview||'',
-           notes: notes||'', actions: actions||[] };
-}
-
-// ─── ROW DEFINITIONS ───────────────────────────────────────────
-// Each entry: [leftId, leftSub, leftStatus, rightId, rightSub, rightStatus]
-// null = no plot on that side for that row
-// Status derived from colour on hand-drawn map
-
-const ML_ROWS = [
-  // top row — only 240 on left, 242 on right (Mattock Lane cuts diagonally)
-  ['240','M','active',  '242','','active'],
-  ['238','B','active',  '239','A','active'],
-  ['236','B','active',  '244','B','active'],
-  ['234','B','active',  '239A','A','active'],
-  ['232','B','1strike', null, null, null],          // 232 green = 1 strike; right side: hatched+241 area
-  ['230','B','active',  '253','','unallocated'],    // 253 = hatched storage
-  ['228','B','active',  '241','','2strikes'],       // 241 pink = 2 strikes
-  ['226','D','active',  '245','','active'],
-  ['224','','active',   '237','','active'],
-  ['222','','active',   '243','','active'],
-  ['220','','active',   '231','M','active'],
-  ['218','','active',   '229','','active'],
-  ['216','B','intake',  '227','','active'],         // 216 purple = intake; small A sub shown purple too
-  ['214','','active',   '225','A','active'],
-  ['212','M','1strike', '223','A','active'],        // 212 green = 1 strike
-  ['210','','active',   '222A','A','active'],
-  ['208','M','1strike', '221','A','active'],        // 208 green = 1 strike
-  ['206','B','active',  '219','A','active'],
-  ['204','B','active',  '217','A','active'],
-  ['202','M','active',  '215','B','active'],
-  ['200','D','active',  '213','B','active'],
-  ['198','','active',   '211','B','active'],
-  ['196','','1strike',  '209','B','active'],        // 196 green = 1 strike
-  ['194','','active',   '207','B','active'],
-  [null, null, null,    '205','B','active'],
-  [null, null, null,    '203','','active'],
-  [null, null, null,    '201','','active'],
-  [null, null, null,    '199','','active'],
-  [null, null, null,    '197','','active'],
-  [null, null, null,    '195','','active'],
+const KML_POLYGONS = [
+  // ── REAL polygons from KML (NFA southern section, 53 plots) ──
+  {id:'193',real:true,coords:[[-0.318788,51.5077036],[-0.318332,51.5076794],[-0.3183226,51.507752],[-0.3187826,51.5077779],[-0.318788,51.5077036]]},
+  {id:'191',real:true,coords:[[-0.3187882,51.5076967],[-0.3187949,51.5076274],[-0.3183362,51.5076091],[-0.3183349,51.5076741],[-0.3187882,51.5076967]]},
+  {id:'189',real:true,coords:[[-0.3187962,51.5076199],[-0.3188029,51.5075581],[-0.3183416,51.5075348],[-0.3183376,51.507599],[-0.3187962,51.5076199]]},
+  {id:'187A',real:true,coords:[[-0.3187988,51.5075494],[-0.3188068,51.5074776],[-0.3185654,51.5074676],[-0.3185587,51.5075369],[-0.3187988,51.5075494]]},
+  {id:'187B',real:true,coords:[[-0.3185587,51.5075369],[-0.3185654,51.5074676],[-0.3183453,51.5074597],[-0.3183426,51.5075273],[-0.3185587,51.5075369]]},
+  {id:'185A',real:true,coords:[[-0.318808,51.5074713],[-0.3188106,51.5074104],[-0.3185719,51.5074004],[-0.3185665,51.5074613],[-0.318808,51.5074713]]},
+  {id:'185B',real:true,coords:[[-0.3185665,51.5074605],[-0.3185719,51.5073996],[-0.318348,51.5073929],[-0.3183466,51.5074505],[-0.3185665,51.5074605]]},
+  {id:'183A',real:true,coords:[[-0.3188097,51.507401],[-0.3188097,51.5073401],[-0.3185777,51.5073275],[-0.3185724,51.507391],[-0.3188097,51.507401]]},
+  {id:'183B',real:true,coords:[[-0.3185724,51.507391],[-0.3185777,51.5073275],[-0.3183497,51.50732],[-0.3183484,51.5073818],[-0.3185724,51.507391]]},
+  {id:'181A',real:true,coords:[[-0.3188079,51.5073295],[-0.3188146,51.5072744],[-0.3185826,51.5072627],[-0.3185799,51.5073203],[-0.3188079,51.5073295]]},
+  {id:'181B',real:true,coords:[[-0.3185799,51.5073203],[-0.3185826,51.5072627],[-0.3183532,51.507256],[-0.3183533,51.5073103],[-0.3185799,51.5073203]]},
+  {id:'192A',real:true,coords:[[-0.3188042,51.5077005],[-0.3188002,51.5077789],[-0.3189772,51.5077914],[-0.3189853,51.5077105],[-0.3188042,51.5077005]]},
+  {id:'192B',real:true,coords:[[-0.3189772,51.5077914],[-0.3191823,51.5078048],[-0.3191958,51.5077213],[-0.3189853,51.5077105],[-0.3189772,51.5077914]]},
+  {id:'190A',real:true,coords:[[-0.3188123,51.5076245],[-0.3188029,51.5076929],[-0.3189866,51.507703],[-0.3189946,51.5076337],[-0.3188123,51.5076245]]},
+  {id:'190B',real:true,coords:[[-0.3189946,51.5076337],[-0.3189866,51.507703],[-0.3191958,51.5077138],[-0.3191998,51.5076445],[-0.3189946,51.5076337]]},
+  {id:'188',real:true,coords:[[-0.3192087,51.5075748],[-0.3188151,51.5075565],[-0.3188077,51.5076182],[-0.319202,51.5076374],[-0.3192087,51.5075748]]},
+  {id:'186',real:true,coords:[[-0.3188124,51.5075498],[-0.319212,51.507569],[-0.3192214,51.5074997],[-0.3188218,51.5074788],[-0.3188124,51.5075498]]},
+  {id:'184A',real:true,coords:[[-0.3188308,51.5074731],[-0.3190011,51.5074814],[-0.3190078,51.5074204],[-0.3188348,51.5074096],[-0.3188308,51.5074731]]},
+  {id:'184B',real:true,coords:[[-0.3190011,51.5074814],[-0.319221,51.5074897],[-0.3192425,51.5074338],[-0.3190078,51.5074204],[-0.3190011,51.5074814]]},
+  {id:'182',real:true,coords:[[-0.3188375,51.5074037],[-0.3192398,51.5074271],[-0.3192518,51.5073661],[-0.3188375,51.507342],[-0.3188375,51.5074037]]},
+  {id:'180A',real:true,coords:[[-0.3188441,51.5073337],[-0.3190158,51.5073453],[-0.3190171,51.5072836],[-0.3188387,51.5072777],[-0.3188441,51.5073337]]},
+  {id:'180B',real:true,coords:[[-0.3190158,51.5073453],[-0.3192505,51.5073579],[-0.3192585,51.5072944],[-0.3190171,51.5072836],[-0.3190158,51.5073453]]},
+  {id:'178A',real:true,coords:[[-0.3188508,51.5072721],[-0.3190506,51.5072787],[-0.3190547,51.5072144],[-0.3188575,51.5072103],[-0.3188508,51.5072721]]},
+  {id:'178B',real:true,coords:[[-0.3190506,51.5072787],[-0.3192545,51.5072862],[-0.3192558,51.5072153],[-0.3190547,51.5072144],[-0.3190506,51.5072787]]},
+  {id:'176A',real:true,coords:[[-0.3190547,51.5072052],[-0.3190667,51.5071376],[-0.3188843,51.5071351],[-0.3188602,51.5072019],[-0.3190547,51.5072052]]},
+  {id:'176B',real:true,coords:[[-0.3190547,51.5072052],[-0.3192558,51.5072061],[-0.3192746,51.5071434],[-0.3190667,51.5071376],[-0.3190547,51.5072052]]},
+  {id:'174A',real:true,coords:[[-0.3188857,51.5071276],[-0.3190694,51.5071285],[-0.3190734,51.5070683],[-0.318887,51.5070617],[-0.3188857,51.5071276]]},
+  {id:'174B',real:true,coords:[[-0.3190694,51.5071285],[-0.319276,51.5071351],[-0.3192974,51.5070726],[-0.3190734,51.5070683],[-0.3190694,51.5071285]]},
+  {id:'172A',real:true,coords:[[-0.3188843,51.507055],[-0.3190748,51.5070592],[-0.3190775,51.5069999],[-0.3188843,51.5069957],[-0.3188843,51.507055]]},
+  {id:'172B',real:true,coords:[[-0.3190748,51.5070592],[-0.3192974,51.5070642],[-0.3193122,51.5070058],[-0.3190775,51.5069999],[-0.3190748,51.5070592]]},
+  {id:'170A',real:true,coords:[[-0.3188857,51.5069899],[-0.3190788,51.5069924],[-0.3190895,51.5069331],[-0.3189018,51.5069306],[-0.3188857,51.5069899]]},
+  {id:'170B',real:true,coords:[[-0.3190788,51.5069924],[-0.3193108,51.5069966],[-0.3193242,51.5069356],[-0.3190895,51.5069331],[-0.3190788,51.5069924]]},
+  {id:'168A',real:true,coords:[[-0.3189031,51.5069248],[-0.3190909,51.5069265],[-0.3190922,51.5068638],[-0.3189045,51.5068705],[-0.3189031,51.5069248]]},
+  {id:'168B',real:true,coords:[[-0.3190909,51.5069265],[-0.3193256,51.5069273],[-0.3193323,51.5068522],[-0.3190922,51.5068638],[-0.3190909,51.5069265]]},
+  {id:'166',real:true,coords:[[-0.3189048,51.5068617],[-0.3193299,51.5068467],[-0.3193393,51.5067916],[-0.3189075,51.5067933],[-0.3189048,51.5068617]]},
+  {id:'164',real:true,coords:[[-0.3189115,51.5067849],[-0.3193407,51.5067866],[-0.319346,51.5067173],[-0.3189115,51.5067156],[-0.3189115,51.5067849]]},
+  {id:'162',real:true,coords:[[-0.3189169,51.5067089],[-0.319346,51.5067115],[-0.3193554,51.506658],[-0.318929,51.506648],[-0.3189169,51.5067089]]},
+  {id:'160A',real:true,coords:[[-0.3189303,51.5066413],[-0.3191248,51.506648],[-0.3191288,51.5065862],[-0.3189383,51.5065862],[-0.3189303,51.5066413]]},
+  {id:'160B',real:true,coords:[[-0.3191248,51.506648],[-0.3193554,51.5066513],[-0.3193675,51.5065829],[-0.3191288,51.5065862],[-0.3191248,51.506648]]},
+  {id:'158A',real:true,coords:[[-0.318941,51.5065787],[-0.3191301,51.5065771],[-0.3191422,51.5065069],[-0.3189491,51.5065153],[-0.318941,51.5065787]]},
+  {id:'158B',real:true,coords:[[-0.3191301,51.5065771],[-0.3193648,51.5065754],[-0.3193662,51.5064969],[-0.3191422,51.5065069],[-0.3191301,51.5065771]]},
+  {id:'156A',real:true,coords:[[-0.3189504,51.5065061],[-0.3191422,51.5064986],[-0.3191476,51.5064402],[-0.3189531,51.506451],[-0.3189504,51.5065061]]},
+  {id:'156B',real:true,coords:[[-0.3191422,51.5064986],[-0.3193688,51.5064869],[-0.3193796,51.5064251],[-0.3191476,51.5064402],[-0.3191422,51.5064986]]},
+  {id:'154A',real:true,coords:[[-0.3189558,51.5064427],[-0.3191476,51.5064343],[-0.3191543,51.5063742],[-0.3189585,51.5063834],[-0.3189558,51.5064427]]},
+  {id:'154B',real:true,coords:[[-0.3191476,51.5064343],[-0.3193796,51.5064193],[-0.3193916,51.50636],[-0.3191543,51.5063742],[-0.3191476,51.5064343]]},
+  {id:'152A',real:true,coords:[[-0.3189611,51.5063776],[-0.3191569,51.5063675],[-0.3191623,51.5063008],[-0.3189611,51.5063166],[-0.3189611,51.5063776]]},
+  {id:'152B',real:true,coords:[[-0.3191569,51.5063675],[-0.319393,51.5063525],[-0.3194091,51.5062816],[-0.3191623,51.5063008],[-0.3191569,51.5063675]]},
+  {id:'150A',real:true,coords:[[-0.3189625,51.50631],[-0.3191623,51.5062924],[-0.3191663,51.5062256],[-0.3189598,51.5062457],[-0.3189625,51.50631]]},
+  {id:'150B',real:true,coords:[[-0.3191623,51.5062924],[-0.3194118,51.5062724],[-0.3194211,51.5062056],[-0.3191663,51.5062256],[-0.3191623,51.5062924]]},
+  {id:'148A',real:true,coords:[[-0.3189598,51.5062382],[-0.319165,51.5062165],[-0.3191637,51.5061639],[-0.3189545,51.5061781],[-0.3189598,51.5062382]]},
+  {id:'148B',real:true,coords:[[-0.319165,51.5062165],[-0.3194211,51.5061956],[-0.3194198,51.506148],[-0.3191637,51.5061639],[-0.319165,51.5062165]]},
+  {id:'146B',real:true,coords:[[-0.3194211,51.5061397],[-0.3194278,51.5060754],[-0.3191744,51.5061188],[-0.3191784,51.5061564],[-0.3194211,51.5061397]]},
+  {id:'147',real:true,coords:[[-0.3189269,51.5061658],[-0.3189175,51.5061032],[-0.3183985,51.5062151],[-0.3184079,51.5062301],[-0.3189269,51.5061658]]},
+  // ── ESTIMATED polygons — ML (northern) section ─────────────────────────
+  {id:'240',real:false,coords:[[-0.31925,51.50830],[-0.31885,51.50830],[-0.31885,51.50822],[-0.31925,51.50822],[-0.31925,51.50830]]},
+  {id:'242',real:false,coords:[[-0.31847,51.50830],[-0.31823,51.50830],[-0.31823,51.50822],[-0.31847,51.50822],[-0.31847,51.50830]]},
+  {id:'238',real:false,coords:[[-0.31926,51.50838],[-0.31886,51.50838],[-0.31886,51.50830],[-0.31926,51.50830],[-0.31926,51.50838]]},
+  {id:'239',real:false,coords:[[-0.31846,51.50838],[-0.31822,51.50838],[-0.31822,51.50830],[-0.31846,51.50830],[-0.31846,51.50838]]},
+  {id:'236',real:false,coords:[[-0.31926,51.50847],[-0.31886,51.50847],[-0.31886,51.50839],[-0.31926,51.50839],[-0.31926,51.50847]]},
+  {id:'244',real:false,coords:[[-0.31845,51.50847],[-0.31821,51.50847],[-0.31821,51.50839],[-0.31845,51.50839],[-0.31845,51.50847]]},
+  {id:'234',real:false,coords:[[-0.31927,51.50855],[-0.31887,51.50855],[-0.31887,51.50847],[-0.31927,51.50847],[-0.31927,51.50855]]},
+  {id:'239A',real:false,coords:[[-0.31845,51.50855],[-0.31821,51.50855],[-0.31821,51.50847],[-0.31845,51.50847],[-0.31845,51.50855]]},
+  {id:'232',real:false,coords:[[-0.31927,51.50864],[-0.31887,51.50864],[-0.31887,51.50856],[-0.31927,51.50856],[-0.31927,51.50864]]},
+  {id:'230',real:false,coords:[[-0.31927,51.50872],[-0.31887,51.50872],[-0.31887,51.50864],[-0.31927,51.50864],[-0.31927,51.50872]]},
+  {id:'253',real:false,coords:[[-0.31843,51.50872],[-0.31819,51.50872],[-0.31819,51.50864],[-0.31843,51.50864],[-0.31843,51.50872]]},
+  {id:'228',real:false,coords:[[-0.31927,51.50881],[-0.31887,51.50881],[-0.31887,51.50873],[-0.31927,51.50873],[-0.31927,51.50881]]},
+  {id:'241',real:false,coords:[[-0.31842,51.50881],[-0.31818,51.50881],[-0.31818,51.50873],[-0.31842,51.50873],[-0.31842,51.50881]]},
+  {id:'226',real:false,coords:[[-0.31928,51.50889],[-0.31888,51.50889],[-0.31888,51.50881],[-0.31928,51.50881],[-0.31928,51.50889]]},
+  {id:'245',real:false,coords:[[-0.31841,51.50889],[-0.31817,51.50889],[-0.31817,51.50881],[-0.31841,51.50881],[-0.31841,51.50889]]},
+  {id:'224',real:false,coords:[[-0.31928,51.50898],[-0.31888,51.50898],[-0.31888,51.50890],[-0.31928,51.50890],[-0.31928,51.50898]]},
+  {id:'237',real:false,coords:[[-0.31841,51.50898],[-0.31817,51.50898],[-0.31817,51.50890],[-0.31841,51.50890],[-0.31841,51.50898]]},
+  {id:'222',real:false,coords:[[-0.31929,51.50906],[-0.31889,51.50906],[-0.31889,51.50898],[-0.31929,51.50898],[-0.31929,51.50906]]},
+  {id:'243',real:false,coords:[[-0.31840,51.50906],[-0.31816,51.50906],[-0.31816,51.50898],[-0.31840,51.50898],[-0.31840,51.50906]]},
+  {id:'220',real:false,coords:[[-0.31929,51.50915],[-0.31889,51.50915],[-0.31889,51.50907],[-0.31929,51.50907],[-0.31929,51.50915]]},
+  {id:'231',real:false,coords:[[-0.31839,51.50915],[-0.31815,51.50915],[-0.31815,51.50907],[-0.31839,51.50907],[-0.31839,51.50915]]},
+  {id:'218',real:false,coords:[[-0.31929,51.50923],[-0.31889,51.50923],[-0.31889,51.50915],[-0.31929,51.50915],[-0.31929,51.50923]]},
+  {id:'229',real:false,coords:[[-0.31838,51.50923],[-0.31814,51.50923],[-0.31814,51.50915],[-0.31838,51.50915],[-0.31838,51.50923]]},
+  {id:'216',real:false,coords:[[-0.31930,51.50931],[-0.31890,51.50931],[-0.31890,51.50923],[-0.31930,51.50923],[-0.31930,51.50931]]},
+  {id:'227',real:false,coords:[[-0.31837,51.50931],[-0.31813,51.50931],[-0.31813,51.50923],[-0.31837,51.50923],[-0.31837,51.50931]]},
+  {id:'214',real:false,coords:[[-0.31930,51.50940],[-0.31890,51.50940],[-0.31890,51.50932],[-0.31930,51.50932],[-0.31930,51.50940]]},
+  {id:'225',real:false,coords:[[-0.31837,51.50940],[-0.31813,51.50940],[-0.31813,51.50932],[-0.31837,51.50932],[-0.31837,51.50940]]},
+  {id:'212',real:false,coords:[[-0.31931,51.50948],[-0.31891,51.50948],[-0.31891,51.50940],[-0.31931,51.50940],[-0.31931,51.50948]]},
+  {id:'223',real:false,coords:[[-0.31836,51.50948],[-0.31812,51.50948],[-0.31812,51.50940],[-0.31836,51.50940],[-0.31836,51.50948]]},
+  {id:'210',real:false,coords:[[-0.31931,51.50957],[-0.31891,51.50957],[-0.31891,51.50949],[-0.31931,51.50949],[-0.31931,51.50957]]},
+  {id:'221',real:false,coords:[[-0.31835,51.50957],[-0.31811,51.50957],[-0.31811,51.50949],[-0.31835,51.50949],[-0.31835,51.50957]]},
+  {id:'208',real:false,coords:[[-0.31931,51.50965],[-0.31891,51.50965],[-0.31891,51.50957],[-0.31931,51.50957],[-0.31931,51.50965]]},
+  {id:'219',real:false,coords:[[-0.31834,51.50965],[-0.31810,51.50965],[-0.31810,51.50957],[-0.31834,51.50957],[-0.31834,51.50965]]},
+  {id:'206',real:false,coords:[[-0.31932,51.50973],[-0.31892,51.50973],[-0.31892,51.50965],[-0.31932,51.50965],[-0.31932,51.50973]]},
+  {id:'217',real:false,coords:[[-0.31833,51.50973],[-0.31809,51.50973],[-0.31809,51.50965],[-0.31833,51.50965],[-0.31833,51.50973]]},
+  {id:'204',real:false,coords:[[-0.31932,51.50982],[-0.31892,51.50982],[-0.31892,51.50974],[-0.31932,51.50974],[-0.31932,51.50982]]},
+  {id:'215',real:false,coords:[[-0.31833,51.50982],[-0.31809,51.50982],[-0.31809,51.50974],[-0.31833,51.50974],[-0.31833,51.50982]]},
+  {id:'202',real:false,coords:[[-0.31933,51.50990],[-0.31893,51.50990],[-0.31893,51.50982],[-0.31933,51.50982],[-0.31933,51.50990]]},
+  {id:'213',real:false,coords:[[-0.31832,51.50990],[-0.31808,51.50990],[-0.31808,51.50982],[-0.31832,51.50982],[-0.31832,51.50990]]},
+  {id:'200',real:false,coords:[[-0.31933,51.50999],[-0.31893,51.50999],[-0.31893,51.50991],[-0.31933,51.50991],[-0.31933,51.50999]]},
+  {id:'211',real:false,coords:[[-0.31831,51.50999],[-0.31807,51.50999],[-0.31807,51.50991],[-0.31831,51.50991],[-0.31831,51.50999]]},
+  {id:'198',real:false,coords:[[-0.31933,51.51007],[-0.31893,51.51007],[-0.31893,51.50999],[-0.31933,51.50999],[-0.31933,51.51007]]},
+  {id:'209',real:false,coords:[[-0.31830,51.51007],[-0.31806,51.51007],[-0.31806,51.50999],[-0.31830,51.50999],[-0.31830,51.51007]]},
+  {id:'196',real:false,coords:[[-0.31934,51.51015],[-0.31894,51.51015],[-0.31894,51.51007],[-0.31934,51.51007],[-0.31934,51.51015]]},
+  {id:'207',real:false,coords:[[-0.31829,51.51015],[-0.31805,51.51015],[-0.31805,51.51007],[-0.31829,51.51007],[-0.31829,51.51015]]},
+  {id:'194',real:false,coords:[[-0.31934,51.51024],[-0.31894,51.51024],[-0.31894,51.51016],[-0.31934,51.51016],[-0.31934,51.51024]]},
+  {id:'205',real:false,coords:[[-0.31829,51.51024],[-0.31805,51.51024],[-0.31805,51.51016],[-0.31829,51.51016],[-0.31829,51.51024]]},
+  {id:'203',real:false,coords:[[-0.31828,51.51032],[-0.31804,51.51032],[-0.31804,51.51024],[-0.31828,51.51024],[-0.31828,51.51032]]},
+  {id:'201',real:false,coords:[[-0.31827,51.51041],[-0.31803,51.51041],[-0.31803,51.51033],[-0.31827,51.51033],[-0.31827,51.51041]]},
+  {id:'199',real:false,coords:[[-0.31826,51.51049],[-0.31802,51.51049],[-0.31802,51.51041],[-0.31826,51.51041],[-0.31826,51.51049]]},
+  {id:'197',real:false,coords:[[-0.31826,51.51057],[-0.31802,51.51057],[-0.31802,51.51049],[-0.31826,51.51049],[-0.31826,51.51057]]},
+  {id:'195',real:false,coords:[[-0.31825,51.51066],[-0.31801,51.51066],[-0.31801,51.51058],[-0.31825,51.51058],[-0.31825,51.51066]]}
 ];
 
-// After ROADWAY divider
-const NFA_ROWS = [
-  ['192','M','active',  '193','','active'],
-  ['190','M','active',  '191','','active'],
-  ['188','','active',   '189','','active'],
-  ['186','','active',   '187','M','1strike'],       // 187 green = 1 strike? check — using conservative read
-  ['184','M','1strike', '185','B','active'],        // 184 green = 1 strike
-  ['182','','active',   '183','M','active'],
-  ['180','M','active',  null, null, null],
-  ['178','D','1strike', '187B','M','active'],       // 178 green = 1 strike
-  ['176','B','active',  '179','D','active'],
-  ['174','M','active',  '177','','2strikes'],       // 177 pink = 2 strikes
-  ['172','B','active',  '175','','active'],
-  ['170','M','1strike', '173','','active'],         // 170 green = 1 strike
-  ['168','M','active',  '171','B','active'],
-  ['166','','active',   '169','B','active'],
-  ['164','','active',   '167','B','intake'],        // 167 purple = intake
-  ['162','','active',   '165','M','intake'],        // 165 purple = intake
-  ['160','M','1strike', '163','','active'],         // 160 green = 1 strike
-  ['158','M','active',  '161','B','active'],
-  ['156','M','active',  '159','B','active'],
-  ['154','M','intake',  '157','B','active'],        // 154 purple = intake
-  ['152','B','intake',  '155','B','active'],        // 152 purple = intake
-  ['150','M','intake',  '153','B','intake'],        // 150,153 purple = intake
-  ['148','B','active',  '151','M','intake'],        // 151 purple = intake
-  ['146','B','active',  '149','','intake'],         // 149 purple = intake
+// ═══════════════════════════════════════════════════════════════
+// PLOT DATABASE — status and records
+// ═══════════════════════════════════════════════════════════════
+const ML='Mattock Lane', NFA='Northfields Avenue';
+
+function mkp(id,road,sub,status,cult,strikes,intake,tenant,contact,start,lastInsp,nextReview,notes,actions){
+  return{id,road,sub:sub||'',status,cult:cult||0,strikes:strikes||0,intake:intake||'',
+    tenant:tenant||'',contact:contact||'',start:start||'',lastInsp:lastInsp||'',
+    nextReview:nextReview||'',notes:notes||'',actions:actions||[]};
+}
+
+// Status from hand-drawn colour coding:
+// GREEN = 1strike, PINK/RED = 2strikes, PURPLE = 2025/26 intake, WHITE/no colour = active
+let plots = [
+  // ── NFA section — IDs match KML polygon names exactly ────────
+  mkp('146B',NFA,'','active',75,0,'2020','','','','','','',''),
+  mkp('147',NFA,'','active',60,0,'2019','','','','','','',''),
+  mkp('148A',NFA,'','active',68,0,'2019','','','','','','',''),
+  mkp('148B',NFA,'','active',65,0,'2019','','','','','','',''),
+  mkp('150A',NFA,'','intake',20,0,'2025','','','','','2025-09-01','2025/26 intake.',[]),
+  mkp('150B',NFA,'','intake',18,0,'2025','','','','','2025-09-01','2025/26 intake.',[]),
+  mkp('152A',NFA,'','intake',20,0,'2025','','','','','2025-09-01','2025/26 intake.',[]),
+  mkp('152B',NFA,'','intake',18,0,'2025','','','','','2025-09-01','2025/26 intake.',[]),
+  mkp('154A',NFA,'','intake',22,0,'2025','','','','','2025-09-01','2025/26 intake.',[{date:'2025-03-01',text:'Welcome visit.'}]),
+  mkp('154B',NFA,'','intake',20,0,'2025','','','','','2025-09-01','2025/26 intake.',[]),
+  mkp('156A',NFA,'','active',80,0,'2018','','','','2025-01-08','2026-01-08','',[]),
+  mkp('156B',NFA,'','active',78,0,'2018','','','','2025-01-10','2026-01-10','',[]),
+  mkp('158A',NFA,'','active',77,0,'2019','','','','2025-01-20','2026-01-20','',[]),
+  mkp('158B',NFA,'','active',75,0,'2019','','','','2025-01-22','2026-01-22','',[]),
+  mkp('160A',NFA,'','1strike',40,1,'2022','','','','','2025-06-05','Strike 1 March 2025.',[{date:'2025-03-05',text:'Strike 1 issued.'}]),
+  mkp('160B',NFA,'','1strike',38,1,'2022','','','','','2025-06-05','Strike 1 March 2025.',[{date:'2025-03-05',text:'Strike 1 issued.'}]),
+  mkp('162',NFA,'','active',65,0,'2020','','','','','','',''),
+  mkp('164',NFA,'','active',72,0,'2021','','','','','','',''),
+  mkp('166',NFA,'','active',60,0,'2022','','','','','','',''),
+  mkp('168A',NFA,'','active',68,0,'2020','','','','','','',''),
+  mkp('168B',NFA,'','active',65,0,'2020','','','','','','',''),
+  mkp('170A',NFA,'','1strike',30,1,'2023','','','','','2025-06-18','Strike 1.',[{date:'2025-03-18',text:'Strike 1.'}]),
+  mkp('170B',NFA,'','1strike',28,1,'2023','','','','','2025-06-18','Strike 1.',[{date:'2025-03-18',text:'Strike 1.'}]),
+  mkp('172A',NFA,'','active',75,0,'2021','','','','','','',''),
+  mkp('172B',NFA,'','active',72,0,'2021','','','','','','',''),
+  mkp('174A',NFA,'','active',82,0,'2019','','','','','','',''),
+  mkp('174B',NFA,'','active',80,0,'2019','','','','','','',''),
+  mkp('176A',NFA,'','active',78,0,'2020','','','','','','',''),
+  mkp('176B',NFA,'','active',75,0,'2020','','','','','','',''),
+  mkp('178A',NFA,'','1strike',42,1,'2022','','','','','2025-06-12','Strike 1.',[{date:'2025-03-12',text:'Strike 1.'}]),
+  mkp('178B',NFA,'','1strike',40,1,'2022','','','','','2025-06-12','Strike 1.',[{date:'2025-03-12',text:'Strike 1.'}]),
+  mkp('180A',NFA,'','active',65,0,'2021','','','','','','',''),
+  mkp('180B',NFA,'','active',62,0,'2021','','','','','','',''),
+  mkp('181A',NFA,'','active',70,0,'2020','','','','','','',''),
+  mkp('181B',NFA,'','active',68,0,'2020','','','','','','',''),
+  mkp('182',NFA,'','active',80,0,'2018','','','','2025-01-10','2026-01-10','',[]),
+  mkp('183A',NFA,'','active',70,0,'2020','','','','','','',''),
+  mkp('183B',NFA,'','active',68,0,'2020','','','','','','',''),
+  mkp('184A',NFA,'','1strike',35,1,'2022','','','','','2025-06-08','Strike 1.',[{date:'2025-03-08',text:'Strike 1.'}]),
+  mkp('184B',NFA,'','1strike',33,1,'2022','','','','','2025-06-08','Strike 1.',[{date:'2025-03-08',text:'Strike 1.'}]),
+  mkp('185A',NFA,'','active',80,0,'2019','','','','','','',''),
+  mkp('185B',NFA,'','active',78,0,'2019','','','','','','',''),
+  mkp('186',NFA,'','active',72,0,'2019','','','','','','',''),
+  mkp('187A',NFA,'','1strike',38,1,'2022','','','','','2025-06-10','Strike 1.',[{date:'2025-03-10',text:'Strike 1.'}]),
+  mkp('187B',NFA,'','1strike',36,1,'2022','','','','','2025-06-10','Strike 1.',[{date:'2025-03-10',text:'Strike 1.'}]),
+  mkp('188',NFA,'','active',68,0,'2021','','','','','','',''),
+  mkp('189',NFA,'','active',65,0,'2021','','','','','','',''),
+  mkp('190A',NFA,'','active',70,0,'2020','','','','','','',''),
+  mkp('190B',NFA,'','active',68,0,'2020','','','','','','',''),
+  mkp('191',NFA,'','active',72,0,'2020','','','','','','',''),
+  mkp('192A',NFA,'','active',75,0,'2019','','','','','','',''),
+  mkp('192B',NFA,'','active',73,0,'2019','','','','','','',''),
+  mkp('193',NFA,'','active',78,0,'2019','','','','','','',''),
+  // ── ML section — estimated positions, complete when KML drawn ─
+  mkp('194',ML,'','active',75,0,'2020','','','','','','',''),
+  mkp('195',ML,'','active',60,0,'2023','','','','','','',''),
+  mkp('196',ML,'','1strike',30,1,'2023','','','','','2025-06-20','Strike 1.',[{date:'2025-03-20',text:'Strike 1.'}]),
+  mkp('197',ML,'','active',70,0,'2022','','','','','','',''),
+  mkp('198',ML,'','active',65,0,'2022','','','','','','',''),
+  mkp('199',ML,'','active',75,0,'2020','','','','','','',''),
+  mkp('200',ML,'D','active',90,0,'2017','','','','2025-01-05','2026-01-05','Exemplary long-standing plot.',[{date:'2025-01-05',text:'Annual inspection — outstanding.'}]),
+  mkp('201',ML,'','active',68,0,'2019','','','','','','',''),
+  mkp('202',ML,'M','active',60,0,'2021','','','','','','',''),
+  mkp('203',ML,'','active',80,0,'2018','','','','','','',''),
+  mkp('204',ML,'B','active',77,0,'2019','','','','','','',''),
+  mkp('205',ML,'B','active',72,0,'2020','','','','','','',''),
+  mkp('206',ML,'B','active',80,0,'2018','','','','','','',''),
+  mkp('207',ML,'B','active',65,0,'2021','','','','','','',''),
+  mkp('208',ML,'M','1strike',38,1,'2022','','','','2025-02-28','2025-05-28','Strike 1 Feb 2025.',[{date:'2025-02-28',text:'Strike 1 issued.'}]),
+  mkp('209',ML,'B','active',78,0,'2019','','','','','','',''),
+  mkp('210',ML,'','active',68,0,'2019','','','','','','',''),
+  mkp('211',ML,'B','active',70,0,'2020','','','','','','',''),
+  mkp('212',ML,'M','1strike',35,1,'2021','','','','2025-03-15','2025-06-15','Strike 1.',[{date:'2025-03-15',text:'Strike 1 issued.'}]),
+  mkp('213',ML,'B','active',62,0,'2022','','','','','','',''),
+  mkp('214',ML,'','active',72,0,'2020','','','','','','',''),
+  mkp('215',ML,'B','active',75,0,'2021','','','','','','',''),
+  mkp('216',ML,'B','intake',25,0,'2025','','','','2025-03-01','2025-09-01','2025 intake.',[{date:'2025-03-01',text:'First inspection.'}]),
+  mkp('217',ML,'A','active',68,0,'2020','','','','','','',''),
+  mkp('218',ML,'','active',75,0,'2018','','','','','','',''),
+  mkp('219',ML,'A','active',80,0,'2018','','','','','','',''),
+  mkp('220',ML,'','active',80,0,'2019','','','','','','',''),
+  mkp('221',ML,'A','active',78,0,'2019','','','','','','',''),
+  mkp('222',ML,'','active',70,0,'2020','','','','','','',''),
+  mkp('223',ML,'A','active',55,0,'2023','','','','','','',''),
+  mkp('224',ML,'','active',55,0,'2022','','','','','','',''),
+  mkp('225',ML,'A','active',60,0,'2022','','','','','','',''),
+  mkp('226',ML,'D','active',60,0,'2023','','','','','','',''),
+  mkp('227',ML,'','active',70,0,'2022','','','','','','',''),
+  mkp('228',ML,'B','active',85,0,'2017','','','','2025-01-08','2026-01-08','Long-standing. Excellent.',[{date:'2025-01-08',text:'Annual inspection passed.'}]),
+  mkp('229',ML,'','active',65,0,'2021','','','','','','',''),
+  mkp('230',ML,'B','active',78,0,'2019','','','','','','',''),
+  mkp('231',ML,'M','active',68,0,'2020','','','','','','',''),
+  mkp('232',ML,'B','1strike',40,1,'2022','','','','2025-03-10','2025-06-10','Strike 1.',[{date:'2025-03-10',text:'Strike 1.'}]),
+  mkp('234',ML,'B','active',65,0,'2021','','','','','','',''),
+  mkp('236',ML,'B','active',70,0,'2020','','','','','','',''),
+  mkp('237',ML,'','active',74,0,'2020','','','','','','',''),
+  mkp('238',ML,'B','active',75,0,'2018','','','','','','',''),
+  mkp('239',ML,'A','active',70,0,'2019','','','','','','',''),
+  mkp('239A',ML,'A','active',55,0,'2021','','','','','','',''),
+  mkp('240',ML,'M','active',80,0,'2019','','','','','','',''),
+  mkp('241',ML,'','2strikes',10,2,'2021','','','','2025-03-20','2025-06-20','Two strikes. Final warning.',[{date:'2025-03-20',text:'Strike 2.'},{date:'2024-10-01',text:'Strike 1.'}]),
+  mkp('242',ML,'','active',82,0,'2018','','','','','','',''),
+  mkp('243',ML,'','active',78,0,'2018','','','','','','',''),
+  mkp('244',ML,'B','active',68,0,'2020','','','','','','',''),
+  mkp('245',ML,'','active',80,0,'2019','','','','','','',''),
+  mkp('253',ML,'','unallocated',0,0,'','','','','','','Shed / storage area.',[]),
 ];
-
-// Build flat plots array from row definitions
-let plots = [];
-function buildPlots(rows, road) {
-  rows.forEach(([lid,lsub,lst, rid,rsub,rst]) => {
-    if (lid) plots.push(mkp(lid, road, lsub, lst, lst==='active'?70:lst==='1strike'?38:lst==='2strikes'?12:lst==='intake'?22:lst==='unallocated'?0:0, lst==='1strike'?1:lst==='2strikes'?2:0, lst==='intake'?'2025':'', '', '', '', '', '', '', []));
-    if (rid) plots.push(mkp(rid, road, rsub, rst, rst==='active'?70:rst==='1strike'?38:rst==='2strikes'?12:rst==='intake'?22:rst==='unallocated'?0:0, rst==='1strike'?1:rst==='2strikes'?2:0, rst==='intake'?'2025':'', '', '', '', '', '', '', []));
-  });
-}
-buildPlots(ML_ROWS, ML);
-buildPlots(NFA_ROWS, NFA);
-
-// Seed a few records for demonstration
-function seed(id, tenant, contact, intake, start, lastInsp, nextReview, notes, actions) {
-  const p = plots.find(p => p.id === id);
-  if (!p) return;
-  Object.assign(p, { tenant, contact, intake, start, lastInsp, nextReview, notes, actions });
-}
-seed('241','F. Stone','07700 900001','2021','2021-08-01','2025-03-20','2025-06-20','Second strike — final warning issued. Pink on map.',[{date:'2025-03-20',text:'Strike 2 issued. Final warning. Review June 2025.'},{date:'2024-10-01',text:'Strike 1 issued. 3 months to improve.'}]);
-seed('177','J. Zero','07700 900002','2022','2022-02-01','2025-03-22','2025-06-22','Two strikes. Final warning.',[{date:'2025-03-22',text:'Strike 2 — termination review set.'},{date:'2024-09-15',text:'Strike 1 issued.'}]);
-seed('196','Y. Hassan','07700 900003','2023','2023-01-01','2025-03-20','2025-06-20','Strike 1 March 2025.',[{date:'2025-03-20',text:'Strike 1 issued. Review June 2025.'}]);
-seed('212','W. Chen','07700 900004','2021','2021-09-01','2025-03-15','2025-06-15','Strike 1 issued.',[{date:'2025-03-15',text:'Strike 1 issued — insufficient cultivation.'}]);
-seed('208','G. Whitfield','07700 900005','2022','2022-06-01','2025-02-28','2025-05-28','Warning letter Oct 2024. Strike 1 Feb 2025.',[{date:'2025-02-28',text:'Strike 1 issued.'}]);
-seed('232','A. Patel','07700 900006','2022','2022-07-01','2025-03-10','2025-06-10','Strike March 2025.',[{date:'2025-03-10',text:'Strike 1. Review June 2025.'}]);
-seed('216','D. Hussain','07700 900007','2025','2025-02-01','2025-03-01','2025-09-01','2025 intake. Good start.',[{date:'2025-03-01',text:'First inspection — progressing well.'}]);
-seed('154','W. Noel','07700 900008','2025','2025-02-01','2025-03-01','2025-09-01','2025 intake.',[{date:'2025-03-01',text:'Welcome visit.'}]);
-seed('200','O. Hastings','07700 900009','2017','2017-05-01','2025-01-05','2026-01-05','Exemplary long-standing plot.',[{date:'2025-01-05',text:'Annual inspection — outstanding condition.'}]);
-seed('228','F. Davies','07700 900010','2017','2017-04-01','2025-01-08','2026-01-08','Long-standing. Excellent condition.',[{date:'2025-01-08',text:'Annual inspection passed.'}]);
 
 // ─── HELPERS ───────────────────────────────────────────────────
-function getColor(status) {
-  return { active:'#4A8C3F', '1strike':'#7DC055', '2strikes':'#D4537E',
-           intake:'#7F77DD', vacant:'#AEAAA2', attention:'#E07B3A', unallocated:'#D0CEC8' }[status] || '#4A8C3F';
+function getColor(status){
+  return{active:'#4A8C3F','1strike':'#7DC055','2strikes':'#D4537E',
+    intake:'#7F77DD',vacant:'#AEAAA2',attention:'#E07B3A',unallocated:'#C8C4BC'}[status]||'#4A8C3F';
 }
-function statusLabel(s) {
-  return { active:'Active', vacant:'Vacant', '1strike':'1 strike', '2strikes':'2 strikes',
-           intake:'2025/26 intake', attention:'Needs attention', unallocated:'Not allocated' }[s] || s;
+function statusLabel(s){
+  return{active:'Active',vacant:'Vacant','1strike':'1 strike','2strikes':'2 strikes',
+    intake:'2025/26 intake',attention:'Needs attention',unallocated:'Not allocated'}[s]||s;
 }
-function badgeClass(s) {
-  return { active:'badge-active', vacant:'badge-vacant', '1strike':'badge-1strike',
-           '2strikes':'badge-2strikes', intake:'badge-intake', attention:'badge-attention',
-           unallocated:'badge-unallocated' }[s] || 'badge-vacant';
+function bc(s){
+  return{active:'b-active',vacant:'b-vacant','1strike':'b-1strike','2strikes':'b-2strikes',
+    intake:'b-intake',attention:'b-attention',unallocated:'b-unalloc'}[s]||'b-vacant';
 }
-function fd(d) { return d ? d.replace(/-/g, '/') : '—'; }
+function fd(d){return d?d.replace(/-/g,'/'):'—'}
 
-let selPlot = null;
-let editId  = null;
+let selPlot=null, editId=null;
+let leafletMap=null, plotLayers={};
 
 // ─── PAGE ROUTING ──────────────────────────────────────────────
-function showPage(id) {
-  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
-  document.querySelectorAll('.tab').forEach(b => b.classList.remove('active'));
-  document.getElementById('page-' + id).classList.add('active');
+function showPage(id){
+  document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
+  document.querySelectorAll('.tab').forEach(b=>b.classList.remove('active'));
+  document.getElementById('page-'+id).classList.add('active');
   document.querySelector(`.tab[onclick="showPage('${id}')"]`).classList.add('active');
-  if (id === 'dash')    renderDash();
-  if (id === 'map')     renderSVG();
-  if (id === 'manage')  renderManage();
-  if (id === 'reports') renderReports();
+  if(id==='dash')renderDash();
+  if(id==='map'){initMap();setTimeout(()=>leafletMap&&leafletMap.invalidateSize(),100);}
+  if(id==='manage')renderManage();
+  if(id==='reports')renderReports();
 }
 
-// ─── DASHBOARD ─────────────────────────────────────────────────
-function renderDash() {
-  const tot = plots.length;
-  const occ = plots.filter(p => p.status !== 'vacant' && p.status !== 'unallocated').length;
-  const vac = plots.filter(p => p.status === 'vacant').length;
-  const str = plots.filter(p => p.strikes > 0).length;
-  const atn = plots.filter(p => p.status === 'attention').length;
-  const due = plots.filter(p => { if (!p.nextReview) return false; return new Date(p.nextReview) <= new Date(Date.now() + 30*864e5); }).length;
+// ─── MAP INIT ──────────────────────────────────────────────────
+function initMap(){
+  if(leafletMap) return; // already initialised
 
-  document.getElementById('dash-stats').innerHTML = `
-    <div class="stat-card"><div class="label">Total plots</div><div class="value">${tot}</div></div>
-    <div class="stat-card"><div class="label">Occupied</div><div class="value v-green">${occ}</div></div>
-    <div class="stat-card"><div class="label">Vacant</div><div class="value v-blue">${vac}</div></div>
-    <div class="stat-card"><div class="label">With strikes</div><div class="value v-red">${str}</div></div>
-    <div class="stat-card"><div class="label">Attention</div><div class="value v-amber">${atn}</div></div>
-    <div class="stat-card"><div class="label">Review ≤30d</div><div class="value v-purple">${due}</div></div>
-  `;
-
-  const ap = plots.filter(p => p.strikes > 0 || p.status === 'attention');
-  document.getElementById('dash-attn').innerHTML = ap.length ? ap.map(p => `
-    <div class="attn-card" onclick="showPage('map');setTimeout(()=>selectPlot('${p.id}'),80)">
-      <div style="display:flex;align-items:center;justify-content:space-between;gap:8px">
-        <span class="attn-plot">Plot ${p.id}${p.sub ? ' · ' + p.sub : ''}</span>
-        <span class="badge ${badgeClass(p.status)}">${statusLabel(p.status)}</span>
-      </div>
-      <div class="attn-meta">${p.tenant || 'No tenant'} · ${p.road}</div>
-    </div>
-  `).join('') : '<div style="color:var(--text-faint);font-size:12px;padding:6px 0">No plots needing attention</div>';
-
-  const acts = [];
-  plots.forEach(pl => pl.actions.forEach(a => acts.push({ ...a, pid: pl.id })));
-  acts.sort((a, b) => b.date.localeCompare(a.date));
-  document.getElementById('dash-act').innerHTML = acts.slice(0, 7).map(a => `
-    <div class="hist-item">
-      <div class="hist-date">Plot ${a.pid} · ${fd(a.date)}</div>
-      <div>${a.text}</div>
-    </div>
-  `).join('') || '<div style="color:var(--text-faint);font-size:12px">No recent activity</div>';
-}
-
-// ═══════════════════════════════════════════════════════════════
-//  SVG SITE MAP
-//  Clean digital rendering of the hand-drawn plan.
-//  The site is a long tapered wedge:
-//    - Wider at Mattock Lane (north end)
-//    - Narrows toward Occupation Road (south end)
-//    - Left boundary = Northfields Avenue (straight)
-//    - Right boundary = curves inward (residential boundary)
-//    - Chapel notch at top-right
-//    - Internal ROADWAY divides two sections
-//  Two columns of plots:
-//    Left  = west side (even numbers)
-//    Right = east side (odd numbers + specials)
-//  Each plot = rectangle with number + sub label, colour-coded
-// ═══════════════════════════════════════════════════════════════
-
-function renderSVG() {
-  const svg = document.getElementById('site-svg');
-
-  // Layout constants
-  const PH    = 19;   // plot height (px)
-  const PW_L  = 56;   // left plot width
-  const PW_R  = 52;   // right plot width (slightly narrower — site tapers)
-  const GAP   = 1.5;  // gap between rows
-  const COL_GAP = 4;  // gap between left & right columns (internal path)
-  const LX    = 8;    // left margin
-  const RX    = LX + PW_L + COL_GAP; // right col x
-  const ROAD_H = 13;  // roadway divider height
-  const SVG_W  = 140; // total svg width
-
-  let y = 30; // start y
-  let parts = '';
-
-  // ── site outline background
-  // We'll clip everything to the tapered shape
-  const totalRows = ML_ROWS.length + NFA_ROWS.length;
-  const siteH = totalRows * (PH + GAP) + ROAD_H + y + 30;
-
-  // Background / outer shape (tapered polygon)
-  // Left edge: vertical from y=24 to bottom
-  // Right edge: starts wide at top (x≈122), narrows to x≈112 at roadway, then x≈106 at bottom
-  const oy = 24;
-  const bot = siteH - 20;
-  const outlinePath = `M ${LX-4},${oy} L ${SVG_W-10},${oy} Q ${SVG_W+4},${oy+20} ${SVG_W-4},${oy+80} L ${SVG_W-8},${oy+180} Q ${SVG_W-6},${oy+260} ${SVG_W-14},${oy+300} L ${SVG_W-18},${bot} L ${LX-4},${bot} Z`;
-  parts += `<path d="${outlinePath}" fill="#FAFAF8" stroke="#C8C4BC" stroke-width="1.5"/>`;
-
-  // ── road labels
-  // Mattock Lane — diagonal at top
-  parts += `<text x="${SVG_W/2 + 4}" y="12" text-anchor="middle" font-size="8.5" font-weight="700" fill="#5F5E5A" font-family="DM Sans,sans-serif" letter-spacing="0.5">MATTOCK LANE</text>`;
-  // Chapel top right notch
-  parts += `<polygon points="${SVG_W-22},${oy} ${SVG_W+2},${oy} ${SVG_W+2},${oy+32} ${SVG_W-10},${oy+32}" fill="#EAE8E2" stroke="#C8C4BC" stroke-width="1"/>`;
-  parts += `<text x="${SVG_W-8}" y="${oy+14}" text-anchor="middle" font-size="6.5" fill="#888780" font-family="DM Sans,sans-serif" transform="rotate(-12,${SVG_W-8},${oy+14})">CHAPEL</text>`;
-  // Northfields Ave — left side rotated
-  parts += `<text transform="rotate(-90,6,${siteH/2})" x="0" y="${siteH/2}" text-anchor="middle" font-size="7" fill="#888780" font-family="DM Sans,sans-serif" letter-spacing="0.3">NORTHFIELDS AVENUE</text>`;
-
-  // ── draw ML rows
-  ML_ROWS.forEach(([lid,lsub,lst, rid,rsub,rst]) => {
-    if (lid) {
-      const p = plots.find(p => p.id === lid);
-      if (p) parts += drawPlot(p, LX, y, PW_L, PH);
-    }
-    if (rid) {
-      const p = plots.find(p => p.id === rid);
-      if (p) parts += drawPlot(p, RX, y, PW_R, PH);
-    }
-    y += PH + GAP;
+  leafletMap = L.map('leaflet-map', {
+    center: [51.5068, -0.3189],
+    zoom: 17,
+    zoomControl: true,
   });
 
-  // ── roadway divider
-  parts += `<rect x="${LX}" y="${y}" width="${PW_L + COL_GAP + PW_R}" height="${ROAD_H}" rx="0" fill="#E8E6E0"/>`;
-  parts += `<text x="${LX + (PW_L + COL_GAP + PW_R)/2}" y="${y + ROAD_H/2 + 3.5}" text-anchor="middle" font-size="7.5" font-weight="700" fill="#888780" font-family="DM Sans,sans-serif" letter-spacing="0.5">ROADWAY</text>`;
-  y += ROAD_H + 2;
+  // Esri World Imagery (satellite) tile layer — free, no API key needed
+  L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
+    attribution: 'Tiles &copy; Esri &mdash; Source: Esri, Maxar, GeoEye, Earthstar Geographics, CNES/Airbus DS, USDA, USGS, AeroGRID, IGN, and the GIS User Community',
+    maxZoom: 21,
+    maxNativeZoom: 19,
+  }).addTo(leafletMap);
 
-  // ── draw NFA rows
-  NFA_ROWS.forEach(([lid,lsub,lst, rid,rsub,rst]) => {
-    if (lid) {
-      const p = plots.find(p => p.id === lid);
-      if (p) parts += drawPlot(p, LX, y, PW_L, PH);
+  // Labels overlay — so street names appear on top of satellite
+  L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager_only_labels/{z}/{x}/{y}{r}.png', {
+    attribution: '&copy; OpenStreetMap contributors &copy; CARTO',
+    subdomains: 'abcd',
+    maxZoom: 21,
+    opacity: 0.8,
+  }).addTo(leafletMap);
+
+  renderAllPolygons();
+}
+
+function renderAllPolygons(){
+  // Clear existing layers
+  Object.values(plotLayers).forEach(l => leafletMap.removeLayer(l));
+  plotLayers = {};
+
+  KML_POLYGONS.forEach(polyDef => {
+    const plot = plots.find(p => p.id === polyDef.id);
+    if (!plot) return;
+
+    const col = getColor(plot.status);
+    const isReal = polyDef.real;
+    const isSel = selPlot && selPlot.id === plot.id;
+
+    // Convert [lon,lat] to Leaflet [lat,lon]
+    const latlngs = polyDef.coords.map(c => [c[1], c[0]]);
+
+    const layer = L.polygon(latlngs, {
+      color: isSel ? '#1C1B18' : (isReal ? 'rgba(255,255,255,0.9)' : 'rgba(255,255,255,0.5)'),
+      weight: isSel ? 3 : (isReal ? 2 : 1),
+      fillColor: col,
+      fillOpacity: isReal ? 0.82 : 0.55,
+      dashArray: isReal ? null : '4,3',
+    });
+
+    // Tooltip — plot number always visible
+    layer.bindTooltip(plot.id + (plot.sub ? plot.sub : ''), {
+      permanent: true,
+      direction: 'center',
+      className: 'plot-tooltip',
+      offset: [0, 0],
+    });
+
+    layer.on('click', () => {
+      selPlot = plot;
+      renderAllPolygons(); // re-render to update selection style
+      renderDetail();
+    });
+
+    layer.addTo(leafletMap);
+    plotLayers[plot.id] = layer;
+  });
+}
+
+// ─── KML FILE IMPORT ──────────────────────────────────────────
+function loadKMLFile(input){
+  const file = input.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = e => {
+    const kml = e.target.result;
+    parseKML(kml);
+  };
+  reader.readAsText(file);
+}
+
+function parseKML(kmlText){
+  const parser = new DOMParser();
+  const doc = parser.parseFromString(kmlText, 'text/xml');
+  const placemarks = doc.querySelectorAll('Placemark');
+  let updated = 0;
+
+  placemarks.forEach(pm => {
+    const nameEl = pm.querySelector('n') || pm.querySelector('name');
+    if (!nameEl) return;
+    const rawName = nameEl.textContent.trim();
+    // Extract plot ID: "Plot 191" -> "191", "Plot 239A" -> "239A"
+    const plotId = rawName.replace(/^Plot\s*/i, '').trim();
+
+    const coordEl = pm.querySelector('coordinates');
+    if (!coordEl) return;
+    const raw = coordEl.textContent.trim().split(/\s+/);
+    const coords = raw.map(c => {
+      const parts = c.split(',');
+      return [parseFloat(parts[0]), parseFloat(parts[1])];
+    }).filter(c => !isNaN(c[0]) && !isNaN(c[1]));
+
+    if (coords.length < 3) return;
+
+    // Update or insert into KML_POLYGONS
+    const existing = KML_POLYGONS.find(p => p.id === plotId);
+    if (existing) {
+      existing.coords = coords;
+      existing.real = true;
+      updated++;
+    } else {
+      KML_POLYGONS.push({ id: plotId, real: true, coords });
+      updated++;
     }
-    if (rid) {
-      const p = plots.find(p => p.id === rid);
-      if (p) parts += drawPlot(p, RX, y, PW_R, PH);
-    }
-    y += PH + GAP;
   });
 
-  // ── Occupation Road label
-  parts += `<text x="${SVG_W/2}" y="${y + 14}" text-anchor="middle" font-size="8.5" font-weight="700" fill="#5F5E5A" font-family="DM Sans,sans-serif" letter-spacing="0.5">OCCUPATION ROAD</text>`;
+  const realCount = KML_POLYGONS.filter(p => p.real).length;
+  document.querySelector('.kml-banner span:first-child').textContent = `📍 ${realCount} real polygon${realCount!==1?'s':''} loaded`;
 
-  const svgH = y + 28;
-  svg.setAttribute('viewBox', `0 0 ${SVG_W} ${svgH}`);
-  svg.setAttribute('width', '280');
-  svg.setAttribute('height', String(svgH * 2));
-  svg.innerHTML = parts;
+  if (leafletMap) renderAllPolygons();
+  alert(`✓ KML imported: ${updated} polygon${updated!==1?'s':''} updated.\n${realCount} real polygons now active.`);
 }
 
-function drawPlot(p, x, y, w, h) {
-  const col = getColor(p.status);
-  const isSel = selPlot && selPlot.id === p.id;
-  // label: number + sub, truncated to fit
-  const numLabel = p.id.length > 3 ? p.id.slice(0,3) : p.id;
-  const fullLabel = numLabel + (p.sub ? p.sub : '');
-  const strokeColor = isSel ? '#1C1B18' : 'rgba(255,255,255,0.5)';
-  const strokeW = isSel ? 2.5 : 0.5;
-  const opacity = p.status === 'unallocated' ? 0.6 : (isSel ? 1 : 0.92);
-
-  return `<g class="plot-g${isSel ? ' selected' : ''}" onclick="selectPlot('${p.id}')" data-id="${p.id}">
-    <rect x="${x}" y="${y}" width="${w}" height="${h}" rx="2.5"
-      fill="${col}" opacity="${opacity}"
-      stroke="${strokeColor}" stroke-width="${strokeW}"/>
-    <text x="${x + w/2}" y="${y + h/2 + 3.5}" text-anchor="middle"
-      font-size="7.5" font-weight="700" fill="white" paint-order="stroke"
-      stroke="rgba(0,0,0,0.2)" stroke-width="0.5"
-      font-family="DM Sans,sans-serif">${fullLabel}</text>
-    ${p.strikes > 0 ? `<circle cx="${x+w-6}" cy="${y+6}" r="4.5" fill="rgba(0,0,0,0.28)"/>
-    <text x="${x+w-6}" y="${y+8.5}" text-anchor="middle" font-size="5.5" font-weight="700" fill="white" font-family="DM Sans,sans-serif">${p.strikes}</text>` : ''}
-  </g>`;
-}
-
-function selectPlot(id) {
-  selPlot = plots.find(p => p.id === id) || null;
-  renderSVG();
-  renderDetail();
-}
-
-// ─── DETAIL PANEL ──────────────────────────────────────────────
-function renderDetail() {
-  const panel = document.getElementById('detail-col');
+// ─── DETAIL PANEL ─────────────────────────────────────────────
+function renderDetail(){
+  const panel = document.getElementById('detail-panel');
   const p = selPlot;
-  if (!p) {
-    panel.innerHTML = `<div class="no-sel"><div class="no-sel-icon">🌿</div><div class="no-sel-text">Select a plot on the map<br>to view its full record</div></div>`;
+  if (!p){
+    panel.innerHTML=`<div class="no-sel"><div class="no-sel-icon">🌿</div><div style="font-size:13px;line-height:1.6">Tap any plot on the map<br>to view its record</div></div>`;
     return;
   }
   const c = Math.min(100, Math.max(0, p.cult));
-  const cultNote = c >= 75 ? { cls:'cult-ok', msg:'On track ✓' }
-                 : c >= 50 ? { cls:'cult-warn', msg:'Below 1-year target (75%)' }
-                 : c >= 25 ? { cls:'cult-warn', msg:'Below 6-month target (50%)' }
-                 :           { cls:'cult-warn', msg:'Below 3-month target (25%)' };
-
-  panel.innerHTML = `
-    <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:10px;margin-bottom:2px">
+  const cn = c>=75?{cls:'cult-ok',msg:'On track ✓'}:c>=50?{cls:'cult-warn',msg:'Below 1-year target (75%)'}:c>=25?{cls:'cult-warn',msg:'Below 6-month target (50%)'}:{cls:'cult-warn',msg:'Below 3-month target (25%)'};
+  panel.innerHTML=`
+    <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:10px">
       <div>
-        <div class="plot-title">Plot ${p.id}${p.sub ? ' · ' + p.sub : ''}</div>
+        <div class="plot-title">Plot ${p.id}${p.sub?' · '+p.sub:''}</div>
         <div class="plot-road">${p.road}</div>
       </div>
-      <div style="display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end;align-items:center;padding-top:4px">
-        <span class="badge ${badgeClass(p.status)}">${statusLabel(p.status)}</span>
-        <button class="btn" style="padding:5px 12px;font-size:11px" onclick="openEdit('${p.id}')">Edit</button>
+      <div style="display:flex;gap:5px;align-items:center;padding-top:4px;flex-wrap:wrap;justify-content:flex-end">
+        <span class="badge ${bc(p.status)}">${statusLabel(p.status)}</span>
+        <button class="btn" style="padding:5px 10px;font-size:11px" onclick="openEdit('${p.id}')">Edit</button>
       </div>
     </div>
-    <hr class="detail-divider">
+    <hr class="divider">
     <div class="detail-grid">
-      <div class="df"><label>Tenant</label>
-        <div class="dv ${!p.tenant ? 'empty' : ''}">${p.tenant || 'No tenant'}</div>
-      </div>
-      <div class="df"><label>Contact</label>
-        <div class="dv ${!p.contact ? 'empty' : ''}">${p.contact || '—'}</div>
-      </div>
-      <div class="df"><label>Intake year</label>
-        <div class="dv ${!p.intake ? 'empty' : ''}">${p.intake || '—'}</div>
-      </div>
-      <div class="df"><label>Start date</label>
-        <div class="dv ${!p.start ? 'empty' : ''}">${fd(p.start)}</div>
-      </div>
-      <div class="df"><label>Strikes</label>
-        <div class="dv">${p.strikes > 0
-          ? `<span class="badge ${p.strikes >= 2 ? 'badge-2strikes' : 'badge-1strike'}">${p.strikes} strike${p.strikes > 1 ? 's' : ''}</span>`
-          : '<span style="color:var(--c-active);font-weight:600">None</span>'}</div>
-      </div>
-      <div class="df"><label>Last inspection</label>
-        <div class="dv ${!p.lastInsp ? 'empty' : ''}">${fd(p.lastInsp)}</div>
-      </div>
-      <div class="df"><label>Next review</label>
-        <div class="dv ${!p.nextReview ? 'empty' : ''}">${fd(p.nextReview)}</div>
-      </div>
+      <div class="df"><label>Tenant</label><div class="dv ${!p.tenant?'empty':''}">${p.tenant||'No tenant'}</div></div>
+      <div class="df"><label>Contact</label><div class="dv ${!p.contact?'empty':''}">${p.contact||'—'}</div></div>
+      <div class="df"><label>Intake year</label><div class="dv ${!p.intake?'empty':''}">${p.intake||'—'}</div></div>
+      <div class="df"><label>Start date</label><div class="dv ${!p.start?'empty':''}">${fd(p.start)}</div></div>
+      <div class="df"><label>Strikes</label><div class="dv">${p.strikes>0?`<span class="badge ${p.strikes>=2?'b-2strikes':'b-1strike'}">${p.strikes} strike${p.strikes>1?'s':''}</span>`:'<span style="color:var(--c-active);font-weight:600">None</span>'}</div></div>
+      <div class="df"><label>Last inspection</label><div class="dv ${!p.lastInsp?'empty':''}">${fd(p.lastInsp)}</div></div>
+      <div class="df"><label>Next review</label><div class="dv ${!p.nextReview?'empty':''}">${fd(p.nextReview)}</div></div>
     </div>
-
     <div class="progress-wrap">
-      <label>Cultivation — <strong>${c}%</strong></label>
-      <div class="progress-track">
-        <div class="progress-fill" style="width:${c}%"></div>
-      </div>
-      <div class="progress-ticks">
-        <span>0%</span><span style="margin-left:21%">25% (3m)</span><span style="margin-left:15%">50% (6m)</span><span>75% (1yr)</span><span>100%</span>
-      </div>
-      <div class="${cultNote.cls} cult-note">${cultNote.msg}</div>
+      <div class="plabel">Cultivation — <strong>${c}%</strong></div>
+      <div class="progress-track"><div class="progress-fill" style="width:${c}%"></div></div>
+      <div class="progress-ticks"><span>0%</span><span>25% (3m)</span><span>50% (6m)</span><span>75% (1yr)</span><span>100%</span></div>
+      <div class="${cn.cls} cult-note">${cn.msg}</div>
     </div>
-
-    ${p.notes ? `<div style="margin-top:12px"><div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--text-muted);margin-bottom:4px">Notes</div><div style="font-size:12px;line-height:1.6;color:var(--text)">${p.notes}</div></div>` : ''}
-
-    <hr class="detail-divider">
-    <div class="section-label">Action & inspection history</div>
-    <div class="hist-wrap">
-      ${p.actions.length
-        ? p.actions.map(a => `<div class="hist-entry"><div class="hdate">${fd(a.date)}</div><div class="htext">${a.text}</div></div>`).join('')
-        : '<div style="color:var(--text-faint);font-size:12px;padding:6px 0">No actions recorded yet</div>'}
-    </div>
-    <div class="action-row">
-      <button class="btn btn-ghost" onclick="openEdit('${p.id}')">+ Log action / update record</button>
-    </div>
+    ${p.notes?`<div style="margin-top:10px"><div class="sec-label" style="margin-top:0">Notes</div><div style="font-size:12px;line-height:1.6">${p.notes}</div></div>`:''}
+    <hr class="divider">
+    <div class="sec-label" style="margin-top:0">Action & inspection history</div>
+    <div>${p.actions.length?p.actions.map(a=>`<div class="hist-entry"><div class="hdate">${fd(a.date)}</div><div class="htext">${a.text}</div></div>`).join(''):'<div style="color:var(--text-faint);font-size:12px;padding:4px 0">No actions recorded yet</div>'}</div>
+    <div style="margin-top:10px"><button class="btn btn-ghost" onclick="openEdit('${p.id}')">+ Log action / update</button></div>
   `;
 }
 
-// ─── MANAGE TABLE ──────────────────────────────────────────────
-function renderManage() {
-  const q = (document.getElementById('srch').value || '').toLowerCase();
-  const f = plots.filter(p =>
-    p.id.toLowerCase().includes(q) ||
-    p.tenant.toLowerCase().includes(q) ||
-    p.road.toLowerCase().includes(q) ||
-    p.sub.toLowerCase().includes(q)
-  );
-  document.getElementById('manage-body').innerHTML = f.map(p => `<tr>
-    <td><strong>${p.id}</strong>${p.sub ? `<span style="color:var(--text-muted);font-size:10px;margin-left:2px">${p.sub}</span>` : ''}</td>
-    <td style="font-size:11px;color:var(--text-muted)">${p.road}</td>
-    <td>${p.tenant || `<span style="color:var(--text-faint);font-style:italic">—</span>`}</td>
-    <td><span class="badge ${badgeClass(p.status)}">${statusLabel(p.status)}</span></td>
-    <td>
-      <div style="display:flex;align-items:center;gap:0">
-        <div class="mini-bar"><div class="mini-fill" style="width:${p.cult}%"></div></div>
-        <span style="font-size:11px">${p.cult}%</span>
+// ─── DASHBOARD ─────────────────────────────────────────────────
+function renderDash(){
+  const tot=plots.length,occ=plots.filter(p=>p.status!=='vacant'&&p.status!=='unallocated').length;
+  const vac=plots.filter(p=>p.status==='vacant').length,str=plots.filter(p=>p.strikes>0).length;
+  const atn=plots.filter(p=>p.status==='attention').length;
+  const due=plots.filter(p=>{if(!p.nextReview)return false;return new Date(p.nextReview)<=new Date(Date.now()+30*864e5);}).length;
+  document.getElementById('dash-stats').innerHTML=`
+    <div class="stat-card"><div class="slabel">Total plots</div><div class="svalue">${tot}</div></div>
+    <div class="stat-card"><div class="slabel">Occupied</div><div class="svalue sv-g">${occ}</div></div>
+    <div class="stat-card"><div class="slabel">Vacant</div><div class="svalue sv-b">${vac}</div></div>
+    <div class="stat-card"><div class="slabel">With strikes</div><div class="svalue sv-r">${str}</div></div>
+    <div class="stat-card"><div class="slabel">Attention</div><div class="svalue sv-a">${atn}</div></div>
+    <div class="stat-card"><div class="slabel">Review ≤30d</div><div class="svalue sv-p">${due}</div></div>
+  `;
+  const ap=plots.filter(p=>p.strikes>0||p.status==='attention');
+  document.getElementById('dash-attn').innerHTML=ap.length?ap.map(p=>`
+    <div class="attn-card" onclick="showPage('map');setTimeout(()=>{selPlot=plots.find(x=>x.id==='${p.id}');renderAllPolygons&&renderAllPolygons();renderDetail();},200)">
+      <div style="display:flex;align-items:center;justify-content:space-between;gap:8px">
+        <span style="font-weight:700;font-size:13px">Plot ${p.id}${p.sub?' · '+p.sub:''}</span>
+        <span class="badge ${bc(p.status)}">${statusLabel(p.status)}</span>
       </div>
-    </td>
-    <td>${p.strikes > 0 ? `<span class="badge ${p.strikes >= 2 ? 'badge-2strikes' : 'badge-1strike'}">${p.strikes}</span>` : '—'}</td>
+      <div style="font-size:11px;color:var(--text-muted);margin-top:2px">${p.tenant||'No tenant'} · ${p.road}</div>
+    </div>
+  `).join(''):'<div style="color:var(--text-faint);font-size:12px;padding:4px 0">No plots needing attention</div>';
+  const acts=[];
+  plots.forEach(pl=>pl.actions.forEach(a=>acts.push({...a,pid:pl.id})));
+  acts.sort((a,b)=>b.date.localeCompare(a.date));
+  document.getElementById('dash-act').innerHTML=acts.slice(0,7).map(a=>`
+    <div class="hist-item"><div class="hist-date">Plot ${a.pid} · ${fd(a.date)}</div><div>${a.text}</div></div>
+  `).join('')||'<div style="color:var(--text-faint);font-size:12px">No recent activity</div>';
+}
+
+// ─── MANAGE ────────────────────────────────────────────────────
+function renderManage(){
+  const q=(document.getElementById('srch').value||'').toLowerCase();
+  const f=plots.filter(p=>p.id.toLowerCase().includes(q)||p.tenant.toLowerCase().includes(q)||p.road.toLowerCase().includes(q)||p.sub.toLowerCase().includes(q));
+  document.getElementById('manage-body').innerHTML=f.map(p=>`<tr>
+    <td><strong>${p.id}</strong>${p.sub?`<span style="color:var(--text-muted);font-size:10px"> ${p.sub}</span>`:''}</td>
+    <td style="font-size:11px;color:var(--text-muted)">${p.road}</td>
+    <td>${p.tenant||`<span style="color:var(--text-faint);font-style:italic">—</span>`}</td>
+    <td><span class="badge ${bc(p.status)}">${statusLabel(p.status)}</span></td>
+    <td><div class="mini-bar"><div class="mini-fill" style="width:${p.cult}%"></div></div><span style="font-size:11px">${p.cult}%</span></td>
+    <td>${p.strikes>0?`<span class="badge ${p.strikes>=2?'b-2strikes':'b-1strike'}">${p.strikes}</span>`:'—'}</td>
     <td style="font-size:11px">${fd(p.nextReview)}</td>
-    <td><button class="btn btn-ghost" style="padding:4px 10px;font-size:11px" onclick="openEdit('${p.id}')">Edit</button></td>
+    <td><button class="btn btn-ghost" style="padding:4px 9px;font-size:11px" onclick="openEdit('${p.id}')">Edit</button></td>
   </tr>`).join('');
 }
 
 // ─── REPORTS ───────────────────────────────────────────────────
-function renderReports() {
-  const tot = plots.length;
-  const occ = plots.filter(p => p.status !== 'vacant' && p.status !== 'unallocated').length;
-  const vac = plots.filter(p => p.status === 'vacant').length;
-  const str = plots.filter(p => p.strikes > 0).length;
-  const avgC = Math.round(plots.filter(p => p.cult > 0).reduce((a, p) => a + p.cult, 0) / Math.max(1, plots.filter(p => p.cult > 0).length));
-
-  document.getElementById('rep-stats').innerHTML = `
-    <div class="stat-card"><div class="label">Occupancy</div><div class="value v-green">${Math.round(occ/tot*100)}%</div></div>
-    <div class="stat-card"><div class="label">Occupied</div><div class="value v-green">${occ}</div></div>
-    <div class="stat-card"><div class="label">Vacant</div><div class="value v-blue">${vac}</div></div>
-    <div class="stat-card"><div class="label">With strikes</div><div class="value v-red">${str}</div></div>
-    <div class="stat-card"><div class="label">Avg cultivation</div><div class="value">${avgC}%</div></div>
+function renderReports(){
+  const tot=plots.length,occ=plots.filter(p=>p.status!=='vacant'&&p.status!=='unallocated').length;
+  const vac=plots.filter(p=>p.status==='vacant').length,str=plots.filter(p=>p.strikes>0).length;
+  const avgC=Math.round(plots.filter(p=>p.cult>0).reduce((a,p)=>a+p.cult,0)/Math.max(1,plots.filter(p=>p.cult>0).length));
+  document.getElementById('rep-stats').innerHTML=`
+    <div class="stat-card"><div class="slabel">Occupancy</div><div class="svalue sv-g">${Math.round(occ/tot*100)}%</div></div>
+    <div class="stat-card"><div class="slabel">Occupied</div><div class="svalue sv-g">${occ}</div></div>
+    <div class="stat-card"><div class="slabel">Vacant</div><div class="svalue sv-b">${vac}</div></div>
+    <div class="stat-card"><div class="slabel">With strikes</div><div class="svalue sv-r">${str}</div></div>
+    <div class="stat-card"><div class="slabel">Avg cultivation</div><div class="svalue">${avgC}%</div></div>
   `;
-
-  const roads = ['Mattock Lane', 'Northfields Avenue'];
-  document.getElementById('rep-cult').innerHTML = roads.map(r => {
-    const rp = plots.filter(p => p.road === r);
-    const cp = rp.filter(p => p.cult > 0);
-    const avg = cp.length ? Math.round(cp.reduce((a, p) => a + p.cult, 0) / cp.length) : 0;
-    return `<div style="margin-bottom:12px">
-      <div style="display:flex;justify-content:space-between;margin-bottom:4px">
+  const roads=[ML,NFA];
+  document.getElementById('rep-cult').innerHTML=roads.map(r=>{
+    const rp=plots.filter(p=>p.road===r),cp=rp.filter(p=>p.cult>0);
+    const avg=cp.length?Math.round(cp.reduce((a,p)=>a+p.cult,0)/cp.length):0;
+    return`<div style="margin-bottom:12px">
+      <div style="display:flex;justify-content:space-between;margin-bottom:3px">
         <span style="font-size:12px;font-weight:600">${r}</span>
-        <span style="font-size:11px;color:var(--text-muted)">${cp.length}/${rp.length} plots · avg ${avg}%</span>
+        <span style="font-size:11px;color:var(--text-muted)">${cp.length}/${rp.length} · avg ${avg}%</span>
       </div>
-      <div class="rep-cult-bar"><div class="rep-cult-fill" style="width:${avg}%"></div></div>
+      <div class="rep-bar-track"><div class="rep-bar-fill" style="width:${avg}%"></div></div>
     </div>`;
   }).join('');
-
-  document.getElementById('rep-strikes').innerHTML = `
-    <table class="tbl">
-      <thead><tr><th>Strikes</th><th>Plots</th></tr></thead>
-      <tbody>${[0,1,2,3].map(n => `<tr><td>${n === 0 ? 'None' : n + ' strike' + (n > 1 ? 's' : '')}</td><td><strong>${plots.filter(p => p.strikes === n).length}</strong></td></tr>`).join('')}</tbody>
-    </table>`;
-
-  const statuses = ['active','intake','1strike','2strikes','vacant','attention','unallocated'];
-  document.getElementById('rep-status').innerHTML = `
-    <table class="tbl">
-      <thead><tr><th>Status</th><th>Plots</th></tr></thead>
-      <tbody>${statuses.map(s => `<tr><td><span class="badge ${badgeClass(s)}">${statusLabel(s)}</span></td><td><strong>${plots.filter(p => p.status === s).length}</strong></td></tr>`).join('')}</tbody>
-    </table>`;
-
-  document.getElementById('rep-all').innerHTML = plots.map(p => `<tr>
-    <td><strong>${p.id}</strong></td>
-    <td>${p.sub || '—'}</td>
-    <td style="font-size:11px">${p.road}</td>
-    <td>${p.tenant || '—'}</td>
-    <td><span class="badge ${badgeClass(p.status)}">${statusLabel(p.status)}</span></td>
-    <td>${p.cult}%</td>
-    <td>${p.strikes || '—'}</td>
-    <td style="font-size:11px">${fd(p.lastInsp)}</td>
-    <td style="font-size:11px">${fd(p.nextReview)}</td>
+  document.getElementById('rep-strikes').innerHTML=`<table class="tbl">
+    <thead><tr><th>Strikes</th><th>Plots</th></tr></thead>
+    <tbody>${[0,1,2,3].map(n=>`<tr><td>${n===0?'None':n+' strike'+(n>1?'s':'')}</td><td><strong>${plots.filter(p=>p.strikes===n).length}</strong></td></tr>`).join('')}</tbody>
+  </table>`;
+  const statuses=['active','intake','1strike','2strikes','vacant','attention','unallocated'];
+  document.getElementById('rep-status').innerHTML=`<table class="tbl">
+    <thead><tr><th>Status</th><th>Plots</th></tr></thead>
+    <tbody>${statuses.map(s=>`<tr><td><span class="badge ${bc(s)}">${statusLabel(s)}</span></td><td><strong>${plots.filter(p=>p.status===s).length}</strong></td></tr>`).join('')}</tbody>
+  </table>`;
+  document.getElementById('rep-all').innerHTML=plots.map(p=>`<tr>
+    <td><strong>${p.id}</strong></td><td>${p.sub||'—'}</td><td style="font-size:11px">${p.road}</td>
+    <td>${p.tenant||'—'}</td><td><span class="badge ${bc(p.status)}">${statusLabel(p.status)}</span></td>
+    <td>${p.cult}%</td><td>${p.strikes||'—'}</td>
+    <td style="font-size:11px">${fd(p.lastInsp)}</td><td style="font-size:11px">${fd(p.nextReview)}</td>
   </tr>`).join('');
 }
 
 // ─── MODAL ─────────────────────────────────────────────────────
-function openAdd() {
-  editId = null;
-  document.getElementById('modal-title').textContent = 'Add new plot';
-  ['f-id','f-sub','f-tenant','f-contact','f-intake','f-notes','f-action'].forEach(i => document.getElementById(i).value = '');
-  document.getElementById('f-road').value = 'Mattock Lane';
-  document.getElementById('f-status').value = 'active';
-  document.getElementById('f-cult').value = 0;
-  document.getElementById('f-strikes').value = 0;
-  ['f-start','f-insp','f-review'].forEach(i => document.getElementById(i).value = '');
+function openAdd(){
+  editId=null;
+  document.getElementById('modal-title').textContent='Add new plot';
+  ['f-id','f-sub','f-tenant','f-contact','f-intake','f-notes','f-action'].forEach(i=>document.getElementById(i).value='');
+  document.getElementById('f-road').value=ML;
+  document.getElementById('f-status').value='active';
+  document.getElementById('f-cult').value=0;document.getElementById('f-strikes').value=0;
+  ['f-start','f-insp','f-review'].forEach(i=>document.getElementById(i).value='');
   document.getElementById('modal').classList.add('open');
 }
-
-function openEdit(id) {
-  editId = id;
-  const p = plots.find(p => p.id === id);
-  if (!p) return;
-  document.getElementById('modal-title').textContent = `Edit plot ${id}${p.sub ? ' · ' + p.sub : ''}`;
-  document.getElementById('f-id').value = p.id;
-  document.getElementById('f-sub').value = p.sub;
-  document.getElementById('f-road').value = p.road;
-  document.getElementById('f-status').value = p.status;
-  document.getElementById('f-tenant').value = p.tenant;
-  document.getElementById('f-contact').value = p.contact;
-  document.getElementById('f-intake').value = p.intake;
-  document.getElementById('f-start').value = p.start;
-  document.getElementById('f-cult').value = p.cult;
-  document.getElementById('f-strikes').value = p.strikes;
-  document.getElementById('f-insp').value = p.lastInsp;
-  document.getElementById('f-review').value = p.nextReview;
-  document.getElementById('f-notes').value = p.notes;
-  document.getElementById('f-action').value = '';
+function openEdit(id){
+  editId=id;
+  const p=plots.find(p=>p.id===id);if(!p)return;
+  document.getElementById('modal-title').textContent=`Edit plot ${id}${p.sub?' · '+p.sub:''}`;
+  document.getElementById('f-id').value=p.id;document.getElementById('f-sub').value=p.sub;
+  document.getElementById('f-road').value=p.road;document.getElementById('f-status').value=p.status;
+  document.getElementById('f-tenant').value=p.tenant;document.getElementById('f-contact').value=p.contact;
+  document.getElementById('f-intake').value=p.intake;document.getElementById('f-start').value=p.start;
+  document.getElementById('f-cult').value=p.cult;document.getElementById('f-strikes').value=p.strikes;
+  document.getElementById('f-insp').value=p.lastInsp;document.getElementById('f-review').value=p.nextReview;
+  document.getElementById('f-notes').value=p.notes;document.getElementById('f-action').value='';
   document.getElementById('modal').classList.add('open');
 }
-
-function closeModal() { document.getElementById('modal').classList.remove('open'); }
-
-function saveModal() {
-  const act = document.getElementById('f-action').value.trim();
-  const today = new Date().toISOString().slice(0, 10);
-  if (editId) {
-    const p = plots.find(p => p.id === editId);
-    p.id = document.getElementById('f-id').value || p.id;
-    p.sub = document.getElementById('f-sub').value;
-    p.road = document.getElementById('f-road').value;
-    p.status = document.getElementById('f-status').value;
-    p.tenant = document.getElementById('f-tenant').value;
-    p.contact = document.getElementById('f-contact').value;
-    p.intake = document.getElementById('f-intake').value;
-    p.start = document.getElementById('f-start').value;
-    p.cult = parseInt(document.getElementById('f-cult').value) || 0;
-    p.strikes = parseInt(document.getElementById('f-strikes').value) || 0;
-    p.lastInsp = document.getElementById('f-insp').value;
-    p.nextReview = document.getElementById('f-review').value;
-    p.notes = document.getElementById('f-notes').value;
-    if (act) p.actions.unshift({ date: today, text: act });
-    if (selPlot && selPlot.id === editId) selPlot = p;
+function closeModal(){document.getElementById('modal').classList.remove('open');}
+function saveModal(){
+  const act=document.getElementById('f-action').value.trim();
+  const today=new Date().toISOString().slice(0,10);
+  if(editId){
+    const p=plots.find(p=>p.id===editId);
+    p.id=document.getElementById('f-id').value||p.id;p.sub=document.getElementById('f-sub').value;
+    p.road=document.getElementById('f-road').value;p.status=document.getElementById('f-status').value;
+    p.tenant=document.getElementById('f-tenant').value;p.contact=document.getElementById('f-contact').value;
+    p.intake=document.getElementById('f-intake').value;p.start=document.getElementById('f-start').value;
+    p.cult=parseInt(document.getElementById('f-cult').value)||0;
+    p.strikes=parseInt(document.getElementById('f-strikes').value)||0;
+    p.lastInsp=document.getElementById('f-insp').value;p.nextReview=document.getElementById('f-review').value;
+    p.notes=document.getElementById('f-notes').value;
+    if(act)p.actions.unshift({date:today,text:act});
+    if(selPlot&&selPlot.id===editId)selPlot=p;
   } else {
-    const np = {
-      id: document.getElementById('f-id').value,
-      sub: document.getElementById('f-sub').value,
-      road: document.getElementById('f-road').value,
-      status: document.getElementById('f-status').value,
-      tenant: document.getElementById('f-tenant').value,
-      contact: document.getElementById('f-contact').value,
-      intake: document.getElementById('f-intake').value,
-      start: document.getElementById('f-start').value,
-      cult: parseInt(document.getElementById('f-cult').value) || 0,
-      strikes: parseInt(document.getElementById('f-strikes').value) || 0,
-      lastInsp: document.getElementById('f-insp').value,
-      nextReview: document.getElementById('f-review').value,
-      notes: document.getElementById('f-notes').value,
-      actions: act ? [{ date: today, text: act }] : []
-    };
-    plots.push(np);
+    plots.push({id:document.getElementById('f-id').value,sub:document.getElementById('f-sub').value,
+      road:document.getElementById('f-road').value,status:document.getElementById('f-status').value,
+      tenant:document.getElementById('f-tenant').value,contact:document.getElementById('f-contact').value,
+      intake:document.getElementById('f-intake').value,start:document.getElementById('f-start').value,
+      cult:parseInt(document.getElementById('f-cult').value)||0,
+      strikes:parseInt(document.getElementById('f-strikes').value)||0,
+      lastInsp:document.getElementById('f-insp').value,nextReview:document.getElementById('f-review').value,
+      notes:document.getElementById('f-notes').value,actions:act?[{date:today,text:act}]:[]});
   }
   closeModal();
-  const active = document.querySelector('.page.active').id.replace('page-', '');
+  const active=document.querySelector('.page.active').id.replace('page-','');
   showPage(active);
-  if (selPlot) renderDetail();
+  if(selPlot)renderDetail();
+  if(leafletMap)renderAllPolygons();
 }
+
+// ─── TOOLTIP STYLE ─────────────────────────────────────────────
+const style=document.createElement('style');
+style.textContent=`.plot-tooltip{background:rgba(28,27,24,0.85)!important;border:none!important;color:#fff!important;font-family:'DM Sans',sans-serif!important;font-size:9px!important;font-weight:700!important;padding:2px 4px!important;border-radius:3px!important;box-shadow:none!important;white-space:nowrap}.plot-tooltip::before{display:none!important}`;
+document.head.appendChild(style);
 
 // ─── INIT ──────────────────────────────────────────────────────
 renderDash();
